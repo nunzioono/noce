@@ -51,10 +51,12 @@ impl CodeState {
         let mut content: Vec<Line> = Vec::default();
         let mut string_content = String::default();
 
-        if let Ok(mut file) = File::open(file.clone().unwrap()) {
-            if file.read_to_string(&mut string_content).is_ok() {
-                string_content.to_string().split("\n").enumerate().map(|line| Line::new(line.0 as u16, line.1.to_string())).for_each(|line| content.push(line));
-            }
+        if let Some(path) = file {
+            if let Ok(mut file) = File::open(path) {
+                if file.read_to_string(&mut string_content).is_ok() {
+                    string_content.to_string().split("\n").enumerate().map(|line| Line::new(line.0 as u16, line.1.to_string())).for_each(|line| content.push(line));
+                }
+            }    
         }
         let code = Code::new(content);
         let code_clone = code.clone();
