@@ -2,11 +2,11 @@ pub mod code;
 pub mod project;
 pub mod terminal;
 
-use std::{path::PathBuf, env::current_dir, sync::{Arc, RwLock}};
+use std::{path::PathBuf, env::current_dir, sync::{Arc, RwLock}, cell::RefCell};
 
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 
-use self::{code::CodeState, project::ProjectState, terminal::{TerminalState, terminal_utils::TerminalCommand}};
+use self::{code::CodeState, project::ProjectState, terminal::TerminalState};
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum Panel {
@@ -17,7 +17,7 @@ pub enum Panel {
 
 pub struct App {
     folder: Arc<RwLock<PathBuf>>,
-    file: Option<PathBuf>,
+    file: RefCell<Option<PathBuf>>,
     hover: Option<Panel>,
     focus: Option<Panel>,
     code_state: CodeState,
@@ -26,8 +26,12 @@ pub struct App {
 }
 
 impl Default for App {
+
     fn default() -> App {
-        App { folder: Arc::new(RwLock::new(current_dir().unwrap())), file: None, hover: None, focus: None, code_state: CodeState::default(), project_state: ProjectState::default(), terminal_state: TerminalState::new(TerminalCommand::default()) }
+        let folder = Arc::new(RwLock::new(current_dir().unwrap()));
+        let folder_w = Arc::clone(&folder);
+        let mut path_w = folder_w.write().unwrap().to_path_buf();
+        App { folder: folder, file: RefCell::new(None), hover: None, focus: None, code_state: CodeState::new(&None), project_state: ProjectState::new(&mut path_w), terminal_state: TerminalState::new() }
     }
 
 }
@@ -39,15 +43,15 @@ impl App {
     }
 
     pub fn is_active_file(&self) -> bool {
-        self.file.is_some()
+        self.file.take().is_some()
     }
 
     pub fn get_file(&self) -> PathBuf {
-        self.file.clone().unwrap()
+        self.file.take().unwrap()
     }
 
     pub fn set_file(&mut self, file: PathBuf) {
-        self.file = Some(file);
+        self.file = RefCell::new(Some(file));
     }   
 
     pub fn is_hovering(&self) -> bool {
@@ -90,11 +94,11 @@ impl App {
                 }
             }    
         } else if self.is_focusing() && self.get_focus_panel() == Panel::Project {
-            self.project_state.process(event);
+            self.project_state.process(event, self.folder.write().unwrap().to_path_buf(), self.file.take());
         } else if self.is_focusing() && self.get_focus_panel() == Panel::Code {
-            self.code_state.process(event);
+            self.code_state.process(event, self.file.take());
         } else if self.is_focusing() && self.get_focus_panel() == Panel::Terminal {
-            self.terminal_state.process(event, Arc::clone(&self.folder));
+            self.terminal_state.process(event, &mut self.folder.write().unwrap().to_path_buf());
         } 
     }
 

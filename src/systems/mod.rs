@@ -20,12 +20,9 @@ pub fn start(app: Arc<RwLock<App>>) -> Result<(), Box<dyn Error>>{
     let quit_r = Arc::clone(&quit);
     let app_r = Arc::clone(&app);
 
-    let handle = spawn(move || {
-        let _ = event_system(app, quit); 
-    });
+    let _ = event_system(app, quit); 
 
     let res = ui_system(&mut terminal, app_r, quit_r);
-    handle.join().unwrap();
 
     // restore terminal
     disable_raw_mode()?;

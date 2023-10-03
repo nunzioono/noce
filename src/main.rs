@@ -10,5 +10,6 @@ fn main() {
     //setting the status of the app
     let app = Arc::new(RwLock::new(App::default()));
 
-    let _ = start(app);
+    start(app)
+    .expect("Error: panicked starting the systems");
 }

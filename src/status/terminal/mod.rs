@@ -3,7 +3,7 @@ extern crate clipboard;
 
 pub mod terminal_utils;
 
-use std::{path::PathBuf, sync::{RwLock, Arc}, env, fs::metadata, process::{Command, Stdio}, ops::AddAssign};
+use std::{path::PathBuf, env, fs::metadata, process::{Command, Stdio}, ops::AddAssign};
 
 use clipboard::{ClipboardProvider, ClipboardContext};
 use crossterm::event::{Event, KeyCode, ModifierKeyCode, KeyModifiers, KeyEventKind};
@@ -26,7 +26,7 @@ impl AddAssign<String> for TerminalSelection {
 
 impl TerminalSelection {
 
-    fn new(cmd: TerminalCommand) -> TerminalSelection {
+    fn new(cmd: &TerminalCommand) -> TerminalSelection {
         TerminalSelection {
             command: cmd.to_string(),
             start: cmd.get_position(),
@@ -80,13 +80,11 @@ pub struct TerminalState {
 
 impl TerminalState {
 
-    pub fn new(cmd: TerminalCommand) -> Self {
-        let command_string = cmd.to_string();
-        let position = cmd.get_position();
-        TerminalState { current_command: cmd, commands_history: ExecutedCommandHistory::default(), command_selection: TerminalSelection { command: command_string, start: position, end: position } }
+    pub fn new() -> Self {
+        TerminalState { current_command: TerminalCommand::default(), commands_history: ExecutedCommandHistory::default(), command_selection: TerminalSelection::new(&TerminalCommand::default()) }
     }
 
-    pub fn run_command(&mut self, ref_folder: Arc<RwLock<PathBuf>>) {
+    pub fn run_command(&mut self, ref_folder: &mut PathBuf) {
 
         let command_string: String = self.current_command.to_string();
         let re = Regex::new(r#""[^"]+"|\S+"#).unwrap();
@@ -109,7 +107,7 @@ impl TerminalState {
     
                 let folder_to_access = (*command_args.get(1).unwrap()).to_string().clone();
                 let is_relative = if !folder_to_access.starts_with(&string_root.clone()) { true } else { false };
-                let new_path = if is_relative { format!("{}\\{}",(*ref_folder.read().unwrap()).clone().display(),folder_to_access) } else { format!("{}",folder_to_access)};
+                let new_path = if is_relative { format!("{}\\{}",ref_folder.display(),folder_to_access) } else { format!("{}",folder_to_access)};
                 path = Some(new_path.clone());
     
                 if let Ok(metadata) = metadata(path.clone().unwrap()) {
@@ -133,7 +131,7 @@ impl TerminalState {
                 let output = if cfg!(target_os = "windows") {
                     Command::new("powershell")
                             .args(&["-c", command_string.as_str().clone()])
-                            .current_dir((*ref_folder.read().unwrap()).clone().display().to_string())
+                            .current_dir(ref_folder.display().to_string())
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
                             .output()
@@ -142,7 +140,7 @@ impl TerminalState {
                     Command::new("sh")
                             .arg("-c")
                             .arg(command_string.clone())
-                            .current_dir((*ref_folder.read().unwrap()).clone().display().to_string())
+                            .current_dir(ref_folder.display().to_string())
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
                             .output()
@@ -168,14 +166,14 @@ impl TerminalState {
         
 
         self.current_command.flush();
-        self.commands_history.add(ExecutedTerminalCommand::new(command_string, ref_folder.read().unwrap().clone(), command_output.clone()));
+        self.commands_history.add(ExecutedTerminalCommand::new(command_string, ref_folder.clone(), command_output.clone()));
         if change_folder {
-            (*ref_folder.write().unwrap()) = PathBuf::new().join(path.unwrap());
+            ref_folder.push(path.unwrap());
         }
 
     }
 
-    pub fn process(&mut self, event: Event, folder_ref: Arc<RwLock<PathBuf>>) {
+    pub fn process(&mut self, event: Event, folder_ref: &mut PathBuf) {
         if let Event::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
