@@ -118,6 +118,10 @@ impl ProjectState {
                         if char == 'd' && key.modifiers.contains(KeyModifiers::CONTROL) {
                             self.add_content(&folder_ref, String::from("new_folder"), ContentType::FOLDER);
                         }
+                    },
+                    KeyCode::Esc => {
+                        todo!("ref cell to hover and focus dell'app")
+                        
                     }
                     _ => {}
                 }

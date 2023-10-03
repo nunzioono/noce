@@ -221,6 +221,10 @@ impl TerminalState {
                         self.command_selection.start_selection(self.current_command.get_position());
                         self.command_selection.select_right();
                     },
+                    KeyCode::Esc => {
+                        todo!("ref cell to hover and focus dell'app")
+                        
+                    },
                     _ => {}
                 }
             } else if key.kind == KeyEventKind::Repeat {

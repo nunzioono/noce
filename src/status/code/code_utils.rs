@@ -25,7 +25,7 @@ impl Clone for Line {
 
 impl Display for Line {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.line.as_str());
+        let _ = f.write_str(self.line.as_str());
         Ok(())
     }
 }
@@ -59,6 +59,8 @@ impl Line {
 #[derive(Default,Clone)]
 pub struct Code {
     content: HashMap<u16,String>,
+    current_line: u16,
+    current_char: u16,
 }
 
 impl Display for Code {
@@ -82,11 +84,39 @@ impl Code {
     pub fn new(lines: Vec<Line>) -> Code {
         Code {
             content: lines.into_iter().map(|line| (line.get_number(),line.get_line())).collect(),
+            current_line: 0,
+            current_char: 0
         }
     }
 
-    pub fn remove_line (&mut self, position: u16) {
-        self.content.remove(&position);
+    pub fn up(&mut self) {
+        self.current_line-=1;
+    }
+
+    pub fn down(&mut self) {
+        self.current_line+=1;
+    }
+
+    pub fn left(&mut self) {
+        if self.current_char - 1 > 0 {
+            self.current_char -= 1;
+        }
+    }
+
+    pub fn right(&mut self) {
+        if let Some(line) = self.content.get(&self.current_line) {
+            if self.current_char + 1 <line.len() as u16 {
+                self.current_char += 1;
+            }
+    
+        }
+    }
+
+    pub fn remove_char (&mut self) {
+        self.content.entry(self.current_line)
+        .and_modify(|value| {
+            value.pop();
+        });
     }
 
     pub fn add_line(&mut self, line: String) {
