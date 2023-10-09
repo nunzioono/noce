@@ -14,6 +14,7 @@ pub mod terminal_history;
 pub mod terminal_selection;
 
 // Terminal State
+#[derive(Debug, PartialEq, Eq)]
 pub struct TerminalComponent {
     current_command: Rc<TerminalCommand>,
     commands_history: Rc<ExecutedTerminalHistory>,

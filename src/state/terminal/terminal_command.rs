@@ -1,6 +1,6 @@
 
 // Terminal Command
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TerminalCommand {
     command_buffer: String,
     position: usize,

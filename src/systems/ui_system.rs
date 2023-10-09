@@ -89,10 +89,10 @@ impl UiSystem {
                     Some(tmp)
                 },
                 1 => {
-                    let mut tmp = standard_block.clone().title("Project");
-                    if context_focus == Some(ComponentType::Project) {
+                    let mut tmp = standard_block.clone().title("Code");
+                    if context_focus == Some(ComponentType::Code) {
                         tmp = tmp.style(default_style.clone());
-                    } else if context_focus.is_none() && context_hover == ComponentType::Project {
+                    } else if context_focus.is_none() && context_hover == ComponentType::Code {
                         tmp = tmp.border_style(default_style.clone());
                     }
                     Some(tmp)
@@ -115,7 +115,6 @@ impl UiSystem {
     
         }
     
-        println!("i get here");
         frame.render_widget(blocks.get(0).unwrap().clone(), project_area);
         frame.render_widget(blocks.get(1).unwrap().clone(), code_area);
         frame.render_widget(terminal_text_area.widget(), terminal_area);

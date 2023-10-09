@@ -1,8 +1,8 @@
-use std::{fmt, ops::Add};
+use std::{fmt::{self, Debug, Write}, ops::Add};
 
 
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct Line {
     number: u16,
     line: String,
@@ -30,7 +30,7 @@ impl Line {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Code {
     content: Vec<Line>,
     x: u16,

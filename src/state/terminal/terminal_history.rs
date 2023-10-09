@@ -1,6 +1,7 @@
 use std::{fmt, path::PathBuf};
 
 // Executed Terminal Command
+#[derive(Debug, PartialEq, Eq)]
 pub struct ExecutedTerminalCommand {
     command: String,
     folder: PathBuf,
@@ -42,6 +43,7 @@ impl fmt::Display for ExecutedTerminalCommand {
 }
 
 // Executed Terminal History
+#[derive(Debug, PartialEq, Eq)]
 pub struct ExecutedTerminalHistory {
     history: Vec<ExecutedTerminalCommand>,
     position: u8,

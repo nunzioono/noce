@@ -1,6 +1,6 @@
 use super::code::{Line, Code};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LineSelection {
     line: Line,
     start: u16,
@@ -47,6 +47,7 @@ impl LineSelection {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct CodeSelection {
     code: Code,
     lines: Vec<LineSelection>,

@@ -9,6 +9,7 @@ use crossterm::event::{KeyEventKind, Event, KeyCode, KeyModifiers, ModifierKeyCo
 
 use super::{Component, ComponentType};
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct CodeComponent {
     current: Code,
     history: CodeHistory,

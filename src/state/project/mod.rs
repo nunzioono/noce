@@ -10,6 +10,7 @@ pub enum ContentType {
     FOLDER
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct ProjectComponent {
     contents: Vec<PathBuf>,
     hover: Option<u16>,
@@ -101,9 +102,10 @@ impl Component for ProjectComponent {
 }
 
 impl ProjectComponent {
-    pub fn new() -> Self {
+    pub fn new(contents: Vec<PathBuf>) -> Self {
+
         ProjectComponent {
-            contents: Vec::new(),
+            contents: contents,
             hover: None,
             focus: None,
         }

@@ -1,6 +1,7 @@
 use super::terminal_command::TerminalCommand;
 
-// Terminal Selection
+// Terminal Selectionù
+#[derive(Debug, PartialEq, Eq)]
 pub struct TerminalSelection {
     command: Option<TerminalCommand>,
     start: usize,

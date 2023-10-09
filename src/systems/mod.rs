@@ -24,7 +24,6 @@ pub trait System {
 
 pub fn start(mut app: Arc<RwLock<App>>, context: Arc<RwLock<AppContext>>) -> Result<(), Box<dyn Error>>{
     // setup terminal
-    /*
     enable_raw_mode()?;
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -32,9 +31,7 @@ pub fn start(mut app: Arc<RwLock<App>>, context: Arc<RwLock<AppContext>>) -> Res
     let mut terminal = Terminal::new(backend)?;
 
     let _ = EventSystem::new().start(Arc::clone(&mut app), Arc::clone(&context));
-    println!("Started succesfully event system");
     let _ = UiSystem::new().start(&mut terminal, Arc::clone(&app), Arc::clone(&context));
-    println!("Started succesfully ui system");
 
     // restore terminal
     disable_raw_mode()?;
@@ -44,6 +41,6 @@ pub fn start(mut app: Arc<RwLock<App>>, context: Arc<RwLock<AppContext>>) -> Res
         DisableMouseCapture
     )?;
     terminal.show_cursor()?;
- */
+ 
     Ok(())
 }

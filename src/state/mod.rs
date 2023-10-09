@@ -1,4 +1,4 @@
-use std::{path::PathBuf, ops::ControlFlow, env::current_dir};
+use std::{path::PathBuf, ops::ControlFlow, env::{current_dir, self}};
 
 use crossterm::event::{Event, KeyEventKind, KeyCode};
 
@@ -8,7 +8,7 @@ pub mod code;
 pub mod project;
 pub mod terminal;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum ComponentType {
     Project,
     Code,
@@ -20,6 +20,7 @@ pub trait Component {
     fn handle_event(&mut self, context: &mut AppContext, event: Event);
 }
 
+#[derive(PartialEq, Eq, Debug)]
 pub struct AppContext {
     active_folder: PathBuf,
     active_file: Option<PathBuf>,
@@ -46,7 +47,15 @@ impl Default for AppContext {
 }
 
 impl AppContext {
-    
+    pub fn new(active_folder: PathBuf, active_file: Option<PathBuf>, focus: Option<ComponentType>, hover: ComponentType) -> AppContext {
+        AppContext {
+            active_folder: active_folder,
+            active_file: active_file,
+            focus: focus,
+            hover: hover,
+        }
+    }
+
    // Getter for active_folder
    pub fn active_folder(&self) -> &PathBuf {
         &self.active_folder
@@ -89,6 +98,7 @@ impl AppContext {
     
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct App {
     project: ProjectComponent,
     code: CodeComponent,
@@ -97,8 +107,19 @@ pub struct App {
 
 impl Default for App {
     fn default() -> App {
+        let path = env::current_dir();
+        let mut contents = vec![];
+        if let Ok(path) = path {
+            if let Ok(path) = path.read_dir() {
+                path.into_iter().for_each(|entry| {
+                    if let Ok(entry) = entry {
+                        contents.push(entry.path());                        
+                    }
+                }); 
+            }
+        }
         App {
-            project: ProjectComponent::new(),
+            project: ProjectComponent::new(contents),
             code: CodeComponent::new(Code::new()),
             terminal: TerminalComponent::new()
         }
@@ -106,6 +127,16 @@ impl Default for App {
 }
 
 impl App {
+
+    pub fn new(project: ProjectComponent, code: CodeComponent, terminal: TerminalComponent, path: PathBuf) -> App {
+        let vec_contents: Vec<PathBuf> = path.read_dir().unwrap().into_iter().map(|entry| entry.unwrap().path()).collect();
+
+        App {
+            project: ProjectComponent::new(vec_contents),
+            code: code,
+            terminal: terminal 
+        }
+    }
 
     pub fn get_project(&self) -> &ProjectComponent {
         &self.project
