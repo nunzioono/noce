@@ -114,6 +114,9 @@ impl UiSystem {
             }
     
         }
+        if let Some(block) = blocks.get(2) {
+            terminal_text_area.set_block(block.clone());            
+        }
     
         frame.render_widget(blocks.get(0).unwrap().clone(), project_area);
         frame.render_widget(blocks.get(1).unwrap().clone(), code_area);

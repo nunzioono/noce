@@ -30,8 +30,11 @@ pub fn start(mut app: Arc<RwLock<App>>, context: Arc<RwLock<AppContext>>) -> Res
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let _ = EventSystem::new().start(Arc::clone(&mut app), Arc::clone(&context));
+    //println!("{:#?}\n{:#?}",app,context);
+
     let _ = UiSystem::new().start(&mut terminal, Arc::clone(&app), Arc::clone(&context));
+    let _ = EventSystem::new().start(Arc::clone(&mut app), Arc::clone(&context));
+
 
     // restore terminal
     disable_raw_mode()?;
