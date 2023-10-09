@@ -29,15 +29,16 @@ impl UiSystem {
         app: Arc<RwLock<App>>,
         context: Arc<RwLock<AppContext>>
     ) -> Result<(),Box<dyn Error>> {
-        loop {
-            let app_read_guard = app.read();
-            if let Ok(app_read_guard) = app_read_guard  {
-                let context_read_guard = context.read();
-                if let Ok(context_read_guard) = context_read_guard {
-                    terminal.draw(|f| self.ui(f, &app_read_guard, &context_read_guard))?;
-                }
-            }     
-        }
+        //loop {
+        let app_read_guard = app.read();
+        if let Ok(app_read_guard) = app_read_guard  {
+            let context_read_guard = context.read();
+            if let Ok(context_read_guard) = context_read_guard {
+                terminal.draw(|f| self.ui(f, &app_read_guard, &context_read_guard))?;
+            }
+        }     
+        Ok(())
+        //}
     }
 
     fn ui<B: Backend>(&self, f: &mut Frame<B>, app: &App, context: &AppContext) {

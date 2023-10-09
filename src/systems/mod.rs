@@ -1,4 +1,4 @@
-use std::{sync::{Arc, RwLock}, error::Error, io::stdout};
+use std::{sync::{Arc, RwLock}, error::Error, io::stdout, thread};
 
 use crossterm::{terminal::{enable_raw_mode, EnterAlternateScreen, disable_raw_mode, LeaveAlternateScreen}, execute, event::{EnableMouseCapture, DisableMouseCapture}};
 use ratatui::{prelude::CrosstermBackend, Terminal};
@@ -32,8 +32,11 @@ pub fn start(mut app: Arc<RwLock<App>>, context: Arc<RwLock<AppContext>>) -> Res
 
     //println!("{:#?}\n{:#?}",app,context);
 
-    let _ = UiSystem::new().start(&mut terminal, Arc::clone(&app), Arc::clone(&context));
-    let _ = EventSystem::new().start(Arc::clone(&mut app), Arc::clone(&context));
+    loop {
+        let _ = UiSystem::new().start(&mut terminal, Arc::clone(&app), Arc::clone(&context));
+
+        let _ = EventSystem::new().start(Arc::clone(&mut app), Arc::clone(&context));        
+    }
 
 
     // restore terminal
