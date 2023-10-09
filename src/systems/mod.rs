@@ -1,28 +1,40 @@
+use std::{sync::{Arc, RwLock}, error::Error, io::stdout};
+
+use crossterm::{terminal::{enable_raw_mode, EnterAlternateScreen, disable_raw_mode, LeaveAlternateScreen}, execute, event::{EnableMouseCapture, DisableMouseCapture}};
+use ratatui::{prelude::CrosstermBackend, Terminal};
+
+use crate::state::{AppContext, App};
+
+use self::{event_system::EventSystem, ui_system::UiSystem};
+
 pub mod event_system;
 pub mod ui_system;
 
-use crate::{status::App, systems::{event_system::event_system, ui_system::ui_system}};
+// Define an enum for different types of systems.
+#[derive(PartialEq, Eq, Hash)]
+pub enum SystemType {
+    Event,
+    Ui,
+    // Add more system types here if needed.
+}
 
-use std::{error::Error, io::stdout, sync::{RwLock, Arc}, thread::spawn};
+// Define a trait for systems.
+pub trait System {
+}
 
-use crossterm::{terminal::{enable_raw_mode, EnterAlternateScreen, disable_raw_mode, LeaveAlternateScreen}, execute, event::{EnableMouseCapture, DisableMouseCapture}};
-
-use ratatui::{prelude::CrosstermBackend, Terminal};
-
-pub fn start(app: Arc<RwLock<App>>) -> Result<(), Box<dyn Error>>{
+pub fn start(mut app: Arc<RwLock<App>>, context: Arc<RwLock<AppContext>>) -> Result<(), Box<dyn Error>>{
     // setup terminal
+    /*
     enable_raw_mode()?;
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let quit = Arc::new(RwLock::new(false));
-    let quit_r = Arc::clone(&quit);
-    let app_r = Arc::clone(&app);
 
-    let _ = event_system(app, quit); 
-
-    let res = ui_system(&mut terminal, app_r, quit_r);
+    let _ = EventSystem::new().start(Arc::clone(&mut app), Arc::clone(&context));
+    println!("Started succesfully event system");
+    let _ = UiSystem::new().start(&mut terminal, Arc::clone(&app), Arc::clone(&context));
+    println!("Started succesfully ui system");
 
     // restore terminal
     disable_raw_mode()?;
@@ -32,10 +44,6 @@ pub fn start(app: Arc<RwLock<App>>) -> Result<(), Box<dyn Error>>{
         DisableMouseCapture
     )?;
     terminal.show_cursor()?;
-
-    if let Err(err) = res {
-        println!("{err:?}");
-    }
-
+ */
     Ok(())
 }
