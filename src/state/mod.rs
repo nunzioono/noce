@@ -107,19 +107,9 @@ pub struct App {
 
 impl Default for App {
     fn default() -> App {
-        let path = env::current_dir();
-        let mut contents = vec![];
-        if let Ok(path) = path {
-            if let Ok(path) = path.read_dir() {
-                path.into_iter().for_each(|entry| {
-                    if let Ok(entry) = entry {
-                        contents.push(entry.path());                        
-                    }
-                }); 
-            }
-        }
+
         App {
-            project: ProjectComponent::new(contents),
+            project: ProjectComponent::new(env::current_dir().unwrap().to_path_buf()),
             code: CodeComponent::new(Code::new()),
             terminal: TerminalComponent::new()
         }
@@ -129,10 +119,9 @@ impl Default for App {
 impl App {
 
     pub fn new(project: ProjectComponent, code: CodeComponent, terminal: TerminalComponent, path: PathBuf) -> App {
-        let vec_contents: Vec<PathBuf> = path.read_dir().unwrap().into_iter().map(|entry| entry.unwrap().path()).collect();
 
         App {
-            project: ProjectComponent::new(vec_contents),
+            project: ProjectComponent::new(path),
             code: code,
             terminal: terminal 
         }

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, fs::{File, create_dir}};
+use std::{path::PathBuf, fs::{File, create_dir, read_dir}};
 
 use crossterm::event::{Event, KeyEventKind, KeyCode, KeyModifiers};
 
@@ -13,26 +13,26 @@ pub enum ContentType {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ProjectComponent {
     contents: Vec<PathBuf>,
-    hover: Option<u16>,
-    focus: Option<u16>,
+    hover: usize,
+    focus: Option<usize>,
 }
 
 impl ProjectComponent {
     
-    pub fn get_hover(&self) -> &Option<u16> {
+    pub fn get_hover(&self) -> &usize {
         &self.hover
     }
 
-    pub fn get_focus(&self) -> &Option<u16> {
+    pub fn get_focus(&self) -> &Option<usize> {
         &self.focus
     }
 
-    pub fn set_hover(&mut self, hover: u16) -> &mut Self {
-        self.hover = Some(hover);
+    pub fn set_hover(&mut self, hover: usize) -> &mut Self {
+        self.hover = hover;
         self
     }
 
-    pub fn set_focus(&mut self, focus: u16) -> &mut Self {
+    pub fn set_focus(&mut self, focus: usize) -> &mut Self {
         self.focus = Some(focus);
         self
     }
@@ -50,17 +50,15 @@ impl Component for ProjectComponent {
             if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat {
                 match key.code {
                     KeyCode::Up => {
-                        if let Some(value) = self.get_hover().clone() {
-                            if value > 0 {
-                                self.set_hover(value - 1);
-                            }
+                        if self.get_hover() > &0 {
+                            self.set_hover(self.get_hover() - 1);
                         } else {
                             self.set_hover(0);
                         }
                     },
                     KeyCode::Down => {
                         if let Some(value) = self.focus {
-                            if value < self.contents.len() as u16 {
+                            if value < self.contents.len() {
                                 self.focus = Some(value + 1);
                             }
                         } else {
@@ -73,14 +71,18 @@ impl Component for ProjectComponent {
             if key.kind == KeyEventKind::Press {
                         match key.code {
                             KeyCode::Enter => {
-                                self.focus = self.hover;
-                                self.hover = None;
-                                let selected_item = self.contents[self.focus.unwrap() as usize].clone();
-                                if selected_item.is_dir() {
-                                    context.set_active_folder(selected_item);
-                                } else if  selected_item.is_file() {
-                                    context.set_active_file(Some(selected_item));
+                                self.focus = Some(self.hover);
+
+                                if let Some(focus) = self.focus {
+                                    let selected_item = self.contents[focus as usize].clone();
+
+                                    if selected_item.is_dir() {
+                                        context.set_active_folder(selected_item);
+                                    } else if  selected_item.is_file() {
+                                        context.set_active_file(Some(selected_item));
+                                    }                                    
                                 }
+
                             },
                             KeyCode::Char(char) => {
                                 if char == 'f' && key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -103,11 +105,20 @@ impl Component for ProjectComponent {
 }
 
 impl ProjectComponent {
-    pub fn new(contents: Vec<PathBuf>) -> Self {
+    pub fn new(active_folder: PathBuf) -> Self {
+        let mut contents: Vec<PathBuf> = vec![];
+
+        if let Ok(entries) = read_dir(active_folder) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    contents.push(entry.path());
+                }
+            }
+        }
 
         ProjectComponent {
             contents: contents,
-            hover: None,
+            hover: 0,
             focus: None,
         }
     }

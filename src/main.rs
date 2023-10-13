@@ -10,9 +10,8 @@ use crate::state::{project::ProjectComponent, code::{CodeComponent, code::Code},
 
 fn main() {
     let context = AppContext::default();
-    let vec_contents: Vec<PathBuf> = context.active_folder().read_dir().unwrap().into_iter().map(|entry| entry.unwrap().path()).collect();
     let app = App::new(
-        ProjectComponent::new(vec_contents),
+        ProjectComponent::new(context.active_folder().to_path_buf()),
         CodeComponent::new(Code::new()),
         TerminalComponent::new(),
         context.active_folder().clone());

@@ -18,10 +18,10 @@ mod unit_tests {
 
     #[test]
     pub fn app_state_default() {
+        let context = AppContext::default();
         let app: App = App::default();
-        let vec_contents: Vec<PathBuf> = env::current_dir().unwrap().read_dir().unwrap().into_iter().map(|entry| entry.unwrap().path()).collect();
         assert_eq!(app, App::new(
-            ProjectComponent::new(vec_contents),
+            ProjectComponent::new(context.active_folder().to_path_buf()),
             CodeComponent::new(Code::new()),
             TerminalComponent::new(),
             env::current_dir().unwrap()
