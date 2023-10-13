@@ -1,9 +1,9 @@
-use std::{sync::{Arc, RwLock}, error::Error};
+use std::error::Error;
 
 use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Modifier, Color, Stylize}, widgets::{Paragraph, Block, BorderType, Borders}};
 use ratatui_textarea::{CursorMove, TextArea};
 
-use crate::state::{App, project::ProjectComponent, code::CodeComponent, terminal::{TerminalComponent, self}, AppContext, ComponentType};
+use crate::state::{App, project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent, AppContext, ComponentType};
 
 use super::System;
 

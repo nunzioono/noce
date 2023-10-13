@@ -1,7 +1,7 @@
 pub mod systems;
 pub mod state;
 pub mod  unit_tests;
-use std::{sync::{Arc, RwLock}, env, path::PathBuf};
+use std::path::PathBuf;
 
 use state::{AppContext, App};
 use systems::start;

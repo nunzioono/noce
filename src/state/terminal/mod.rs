@@ -1,4 +1,4 @@
-use std::{error::Error, path::PathBuf, process::{Command, Stdio}, sync::{Arc, RwLock}};
+use std::{error::Error, path::PathBuf, process::{Command, Stdio}, sync::Arc};
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{Event, KeyEventKind, KeyCode, KeyModifiers, ModifierKeyCode};

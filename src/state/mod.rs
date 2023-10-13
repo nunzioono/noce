@@ -1,4 +1,4 @@
-use std::{path::PathBuf, ops::ControlFlow, env::{current_dir, self}, sync::{Arc, RwLock}};
+use std::{path::PathBuf, ops::ControlFlow, env::{current_dir, self}};
 
 use crossterm::event::{Event, KeyEventKind, KeyCode};
 
@@ -170,8 +170,7 @@ impl App {
         } else {
             if let Event::Key(key) = event {
                 if key.kind == KeyEventKind::Press {
-                    let mut hover: Option<ComponentType> = None;
-                    hover = Some(context.hover().clone());
+                    let hover: Option<ComponentType> = Some(context.hover().clone());
                     match key.code {
                         KeyCode::Tab => {
                             if focus.is_none() {

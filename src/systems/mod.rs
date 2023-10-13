@@ -1,9 +1,9 @@
-use std::{sync::{Arc, RwLock}, error::Error, io::stdout, thread, ops::ControlFlow};
+use std::{error::Error, io::stdout, ops::ControlFlow};
 
 use crossterm::{terminal::{enable_raw_mode, EnterAlternateScreen, disable_raw_mode, LeaveAlternateScreen}, execute, event::{EnableMouseCapture, DisableMouseCapture}};
 use ratatui::{prelude::CrosstermBackend, Terminal};
 
-use crate::state::{AppContext, App, terminal};
+use crate::state::{AppContext, App};
 
 use self::{event_system::EventSystem, ui_system::UiSystem};
 

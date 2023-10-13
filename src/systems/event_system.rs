@@ -1,4 +1,4 @@
-use std::{time::Duration, sync::{Arc, RwLock}, error::Error, ops::ControlFlow};
+use std::{time::Duration, ops::ControlFlow};
 
 use crossterm::event;
 
@@ -21,8 +21,7 @@ impl EventSystem {
     pub fn start(&self, app: &mut App, context: &mut AppContext,) -> ControlFlow<()>{
         if let Ok(_) = event::poll(Duration::from_millis(50)) {
             if let Ok(event) = event::read() {
-                let mut focus = None;
-                focus = context.focus().clone();
+                let focus = context.focus().clone();
                 let res = app.handle_event(context, focus, event);
                 return res;
             }

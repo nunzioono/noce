@@ -1,4 +1,4 @@
-use std::{path::PathBuf, fs::{File, create_dir}, sync::{RwLock, Arc}};
+use std::{path::PathBuf, fs::{File, create_dir}};
 
 use crossterm::event::{Event, KeyEventKind, KeyCode, KeyModifiers};
 

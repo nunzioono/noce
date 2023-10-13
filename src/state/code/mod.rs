@@ -2,7 +2,7 @@ pub mod code_history;
 pub mod code_selection;
 pub mod code;
 
-use std::{fs::{File, OpenOptions}, io::Write, error::Error, sync::{Arc, RwLock}};
+use std::{fs::{File, OpenOptions}, io::Write, error::Error};
 use self::{code::{Code, Line}, code_history::CodeHistory, code_selection::CodeSelection};
 use clipboard::{ClipboardProvider, ClipboardContext};
 use crossterm::event::{KeyEventKind, Event, KeyCode, KeyModifiers, ModifierKeyCode};
