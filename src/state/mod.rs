@@ -1,4 +1,4 @@
-use std::{path::PathBuf, ops::ControlFlow, env::{current_dir, self}};
+use std::{path::PathBuf, ops::ControlFlow, env::{current_dir, self}, sync::{Arc, RwLock}};
 
 use crossterm::event::{Event, KeyEventKind, KeyCode};
 
@@ -17,7 +17,7 @@ pub enum ComponentType {
 
 pub trait Component {
     fn get_type(&self) -> ComponentType;
-    fn handle_event(&mut self, context: &mut AppContext, event: Event);
+    fn handle_event(&mut self, context: Arc<RwLock<AppContext>>, event: Event);
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -150,7 +150,9 @@ impl App {
         &self.terminal
     }
 
-    pub fn handle_event(&mut self, context: &mut AppContext, focus: Option<ComponentType>, event: Event) -> ControlFlow<()>{
+    pub fn handle_event(&mut self, context: Arc<RwLock<AppContext>>, focus: Option<ComponentType>, event: Event) -> ControlFlow<()>{
+
+
         if focus.is_some() {
             if let Some(focus) = focus {
                 match focus {
@@ -165,36 +167,53 @@ impl App {
                     }
                 }
             }
-        }else {
+        } else {
             if let Event::Key(key) = event {
                 if key.kind == KeyEventKind::Press {
-                    if key.code == KeyCode::Tab {
-                        if focus.is_none() {
-                            context.hover = match context.hover() {
-                                ComponentType::Project => {
-                                    ComponentType::Code
+                    let mut hover: Option<ComponentType> = None;
+                    if let Ok(context_read_guard) = context.read() {
+                        hover = Some(context_read_guard.hover().clone());
+                    }
+                    if let Ok(mut context_write_guard) = context.write() {
+                            match key.code {
+                                KeyCode::Tab => {
+                                    if focus.is_none() {
+                                        if let Some(hover) = hover {
+                                            let next_hover = match hover {
+                                                ComponentType::Project => {
+                                                    ComponentType::Code
+                                                },
+                                                ComponentType::Code => {
+                                                    ComponentType::Terminal
+                                                },
+                                                ComponentType::Terminal => {
+                                                    ComponentType::Project
+                                                },
+                                            };
+                                            context_write_guard.set_hover(next_hover);
+                                                
+                                        }
+                                    }
                                 },
-                                ComponentType::Code => {
-                                    ComponentType::Terminal
+                                KeyCode::Enter => {
+                                    if let Ok(context_read_guard) = context.read() {
+                                        context_write_guard.set_focus(Some(context_read_guard.hover().clone()));
+                                    }
                                 },
-                                ComponentType::Terminal => {
-                                    ComponentType::Project
+                                KeyCode::Esc => {
+                                    return ControlFlow::Break(());
+                                },
+                                _ => {
+                                    println!("Event got ignored!")
                                 }
-                            };
-                        }
-                    }
-                    if key.code == KeyCode::Enter {
-                        context.focus = Some(context.hover().clone());
-                    }
-                    if key.code == KeyCode::Esc {
-                        return ControlFlow::Break(());
+                            }
+                        
                     }
                 }    
             }
         }
-        ControlFlow::Continue(())   
+        ControlFlow::Continue(()) 
+  
 
     }
-
- 
 }

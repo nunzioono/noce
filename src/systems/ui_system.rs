@@ -25,20 +25,17 @@ impl System for UiSystem {
 }
 
 impl UiSystem {
-    pub fn start<B: Backend>(&self, terminal: &mut Terminal<B>,
+    pub fn start<B: Backend>(&self, terminal: Arc<RwLock<Terminal<B>>>,
         app: Arc<RwLock<App>>,
         context: Arc<RwLock<AppContext>>
     ) -> Result<(),Box<dyn Error>> {
-        //loop {
-        let app_read_guard = app.read();
-        if let Ok(app_read_guard) = app_read_guard  {
-            let context_read_guard = context.read();
-            if let Ok(context_read_guard) = context_read_guard {
-                terminal.draw(|f| self.ui(f, &app_read_guard, &context_read_guard))?;
-            }
-        }     
-        Ok(())
-        //}
+        loop {
+            if let Ok(app_read_guard) = app.read()  {
+                if let Ok(context_read_guard) = context.read() {
+                    terminal.write().unwrap().draw(|f| self.ui(f, &app_read_guard, &context_read_guard))?;
+                }
+            }     
+        }
     }
 
     fn ui<B: Backend>(&self, f: &mut Frame<B>, app: &App, context: &AppContext) {
@@ -46,7 +43,7 @@ impl UiSystem {
         let project_area = main_area[0];
         let code_area = main_area[1];
         let terminal_area = main_area[2];
-    
+        
         self.render_title(f, title_area);
         self.render_editor(app, context, f, project_area, code_area, terminal_area, &app.get_project(), &app.get_code(), &app.get_terminal());
     }

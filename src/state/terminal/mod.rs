@@ -1,4 +1,4 @@
-use std::{error::Error, path::PathBuf, process::{Command, Stdio}, rc::Rc, borrow::BorrowMut};
+use std::{error::Error, path::PathBuf, process::{Command, Stdio}, sync::{Arc, RwLock}};
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{Event, KeyEventKind, KeyCode, KeyModifiers, ModifierKeyCode};
@@ -16,17 +16,17 @@ pub mod terminal_selection;
 // Terminal State
 #[derive(Debug, PartialEq, Eq)]
 pub struct TerminalComponent {
-    current_command: Rc<TerminalCommand>,
-    commands_history: Rc<ExecutedTerminalHistory>,
-    selection: Rc<TerminalSelection>
+    current_command: Arc<TerminalCommand>,
+    commands_history: Arc<ExecutedTerminalHistory>,
+    selection: Arc<TerminalSelection>
 }
 
 impl TerminalComponent {
     pub fn new() -> Self {
         TerminalComponent {
-            current_command: Rc::new(TerminalCommand::default()),
-            commands_history: Rc::new(ExecutedTerminalHistory::default()),
-            selection: Rc::new(TerminalSelection::new()),
+            current_command: Arc::new(TerminalCommand::default()),
+            commands_history: Arc::new(ExecutedTerminalHistory::default()),
+            selection: Arc::new(TerminalSelection::new()),
         }
     }
 
@@ -49,14 +49,15 @@ impl Component for TerminalComponent {
         ComponentType::Terminal
     }
 
-    fn handle_event(&mut self, context: &mut AppContext, event: Event) {
+    fn handle_event(&mut self, context: Arc<RwLock<AppContext>>, event: Event) {
+        
         if let Event::Key(key) = event {
-            let command = &*Rc::clone(&self.current_command);
-            let history = &*Rc::clone(&self.commands_history);
-            let selection = &*Rc::clone(&self.selection);
-            let mutable_command = Rc::get_mut(&mut self.current_command);
-            let mutable_history = Rc::get_mut(&mut self.commands_history);
-            let mutable_selection = Rc::get_mut(&mut self.selection);
+            let command = &*Arc::clone(&self.current_command);
+            let history = &*Arc::clone(&self.commands_history);
+            let selection = &*Arc::clone(&self.selection);
+            let mutable_command = Arc::get_mut(&mut self.current_command);
+            let mutable_history = Arc::get_mut(&mut self.commands_history);
+            let mutable_selection = Arc::get_mut(&mut self.selection);
 
             if key.kind == KeyEventKind::Press {
                 match key.code {
@@ -134,79 +135,83 @@ impl Component for TerminalComponent {
                         }
                     },
                     KeyCode::Enter => {
-                        if let Some(mutable_selection) = mutable_selection {
-                            if let Some(mutable_history) = mutable_history {
-                                if let Some(mutable_command) = mutable_command {
-                                    mutable_selection.clear_selection();
-                                    let command_string: String = command.get_buffer().clone();
-                                    let re = Regex::new(r#""[^"]+"|\S+"#);
-                                    if let Ok(re) = re {
-
-                                        let command_args: Vec<&str> = re.find_iter(command_string.as_str())
-                                        .map(|m| m.as_str())
-                                        .collect();
-                                        let mut command_output: String = String::from("");
-
-                                        if command_string.len() > 0 {
-
-                                            if *command_args.get(0).unwrap() == "cd" && command_args.len() == 2 {
-                                                let folder_to_access = *command_args.get(1).unwrap();
-                                                let mut path: PathBuf = PathBuf::new();
-
-                                                path.push(context.active_folder());
-                                                path.push(folder_to_access);
-                                    
-                                                if path.is_dir() {
-                                                    context.set_active_folder(path);
-                                                }
-                                        
-                                            } else if *command_args.get(0).unwrap() == "cls" || *command_args.get(0).unwrap() == "clear" {    
-                                                                                
-                                                mutable_history.flush();
-                                                mutable_command.flush();    
-
-                                            } else if command_args.len() > 0 { 
-                                    
-                                                let output = if cfg!(target_os = "windows") {
-                                                    Command::new("powershell")
-                                                            .args(&["-c", command_string.as_str().clone()])
-                                                            .current_dir(context.active_folder().display().to_string())
-                                                            .stdout(Stdio::piped())
-                                                            .stderr(Stdio::piped())
-                                                            .output()
-                                                            .expect("failed to execute process")
-                                                } else {
-                                                    Command::new("sh")
-                                                            .arg("-c")
-                                                            .arg(command_string.clone())
-                                                            .current_dir(context.active_folder().display().to_string())
-                                                            .stdout(Stdio::piped())
-                                                            .stderr(Stdio::piped())
-                                                            .output()
-                                                            .expect("failed to execute process")
-                                                };
-                                    
-                                                let mut is_error = false;
-                                                if let Ok(error_string) = String::from_utf8(output.stderr) {
-                                                    if error_string.len() > 0 {
-                                                        is_error = true;
-                                                        command_output = error_string;
-                                                    }
-                                                }
-                                                if let Ok (output_string) = String::from_utf8(output.stdout) {
-                                                    if output_string.len() > 0 && !is_error {
-                                                        command_output = output_string;
-                                                    }
-                                                }
+                        if let Ok(context_read_ward) = context.read() {
+                            if let Ok(mut context_write_ward) = context.write() {
+                                if let Some(mutable_selection) = mutable_selection {
+                                    if let Some(mutable_history) = mutable_history {
+                                        if let Some(mutable_command) = mutable_command {
+                                            mutable_selection.clear_selection();
+                                            let command_string: String = command.get_buffer().clone();
+                                            let re = Regex::new(r#""[^"]+"|\S+"#);
+                                            if let Ok(re) = re {
+        
+                                                let command_args: Vec<&str> = re.find_iter(command_string.as_str())
+                                                .map(|m| m.as_str())
+                                                .collect();
+                                                let mut command_output: String = String::from("");
+        
+                                                if command_string.len() > 0 {
+        
+                                                    if *command_args.get(0).unwrap() == "cd" && command_args.len() == 2 {
+                                                        let folder_to_access = *command_args.get(1).unwrap();
+                                                        let mut path: PathBuf = PathBuf::new();
+        
+                                                        path.push(context_read_ward.active_folder());
+                                                        path.push(folder_to_access);
+                                            
+                                                        if path.is_dir() {
+                                                            context_write_ward.set_active_folder(path);
+                                                        }
                                                 
+                                                    } else if *command_args.get(0).unwrap() == "cls" || *command_args.get(0).unwrap() == "clear" {    
+                                                                                        
+                                                        mutable_history.flush();
+                                                        mutable_command.flush();    
+        
+                                                    } else if command_args.len() > 0 { 
+                                            
+                                                        let output = if cfg!(target_os = "windows") {
+                                                            Command::new("powershell")
+                                                                    .args(&["-c", command_string.as_str().clone()])
+                                                                    .current_dir(context_read_ward.active_folder().display().to_string())
+                                                                    .stdout(Stdio::piped())
+                                                                    .stderr(Stdio::piped())
+                                                                    .output()
+                                                                    .expect("failed to execute process")
+                                                        } else {
+                                                            Command::new("sh")
+                                                                    .arg("-c")
+                                                                    .arg(command_string.clone())
+                                                                    .current_dir(context_read_ward.active_folder().display().to_string())
+                                                                    .stdout(Stdio::piped())
+                                                                    .stderr(Stdio::piped())
+                                                                    .output()
+                                                                    .expect("failed to execute process")
+                                                        };
+                                            
+                                                        let mut is_error = false;
+                                                        if let Ok(error_string) = String::from_utf8(output.stderr) {
+                                                            if error_string.len() > 0 {
+                                                                is_error = true;
+                                                                command_output = error_string;
+                                                            }
+                                                        }
+                                                        if let Ok (output_string) = String::from_utf8(output.stdout) {
+                                                            if output_string.len() > 0 && !is_error {
+                                                                command_output = output_string;
+                                                            }
+                                                        }
+                                                        
+                                                    }
+        
+                                                }
+        
+                                                mutable_command.flush();
+                                                mutable_history.add(ExecutedTerminalCommand::new(command_string, context_read_ward.active_folder().clone(), command_output.clone()));
                                             }
-
+        
                                         }
-
-                                        mutable_command.flush();
-                                        mutable_history.add(ExecutedTerminalCommand::new(command_string, context.active_folder().clone(), command_output.clone()));
                                     }
-
                                 }
                             }
                         }
@@ -258,8 +263,10 @@ impl Component for TerminalComponent {
                         }
                     },
                     KeyCode::Esc => {
-                        context.set_focus(None);
-                        context.set_hover(self.get_type());                                          
+                        if let Ok(mut context_write_ward) = context.write() {
+                            context_write_ward.set_focus(None);
+                            context_write_ward.set_hover(self.get_type());                                              
+                        }
                     },
                     _ => {}
                 }
