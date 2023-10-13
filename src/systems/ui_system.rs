@@ -25,17 +25,12 @@ impl System for UiSystem {
 }
 
 impl UiSystem {
-    pub fn start<B: Backend>(&self, terminal: Arc<RwLock<Terminal<B>>>,
-        app: Arc<RwLock<App>>,
-        context: Arc<RwLock<AppContext>>
+    pub fn start<B: Backend>(&self, terminal: &mut Terminal<B>,
+        app: &App,
+        context: &AppContext
     ) -> Result<(),Box<dyn Error>> {
-        loop {
-            if let Ok(app_read_guard) = app.read()  {
-                if let Ok(context_read_guard) = context.read() {
-                    terminal.write().unwrap().draw(|f| self.ui(f, &app_read_guard, &context_read_guard))?;
-                }
-            }     
-        }
+        terminal.draw(|f| self.ui(f, app, context))?;
+        Ok(())
     }
 
     fn ui<B: Backend>(&self, f: &mut Frame<B>, app: &App, context: &AppContext) {

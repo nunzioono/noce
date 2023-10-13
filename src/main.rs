@@ -17,6 +17,6 @@ fn main() {
         TerminalComponent::new(),
         context.active_folder().clone());
 
-    start(Arc::new(RwLock::new(app)), Arc::new(RwLock::new(context)))
+    start(app, context)
     .expect("Error: panicked starting the systems");
 }

@@ -22,7 +22,7 @@ impl Component for CodeComponent {
         ComponentType::Code
     }
 
-    fn handle_event(&mut self, context: Arc<RwLock<AppContext>>, event: Event) {
+    fn handle_event(&mut self, context: &mut AppContext, event: Event) {
         if let Event::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
@@ -67,28 +67,26 @@ impl Component for CodeComponent {
                                 }
                             }
                         } else if char_normalized == "s" && key.modifiers.contains(KeyModifiers::CONTROL) {
-                            if let Ok(context_read_ward) = context.read() {
                                 self.history.use_last();
                                 let code = self.history.get_current_code();
                                 let utf8_code = code.to_string().chars().map(|char| char as u8).fold(vec![], |mut vec, char| {
                                     vec.push(char);
                                     vec
                                 });
-                                if let Some(path) = context_read_ward.active_file() {
+                                if let Some(path) = context.active_file() {
                                     if path.is_file() {
                                         let f = OpenOptions::new().append(true).open(path);
                                         if let Ok(mut file) = f {
                                             let _ = file.write_all(&utf8_code);
                                         }    
                                     }
-                                } else if let Some(path) = context_read_ward.active_file() {
+                                } else if let Some(path) = context.active_file() {
                                     let f = File::create(path);
                                     if let Ok(mut file) = f {
                                         let _ = file.write_all(&utf8_code);
                                     }
                                 } 
     
-                            }
                         } else if char_normalized == "z" && key.modifiers.contains(KeyModifiers::CONTROL) {
                             self.history.use_previous();
                             let code = self.history.get_current_code();
@@ -187,10 +185,8 @@ impl Component for CodeComponent {
                         }
                     },
                     KeyCode::Esc => {
-                        if let Ok(mut context_write_ward) = context.write() {
-                            context_write_ward.set_focus(None);
-                            context_write_ward.set_hover(self.get_type());             
-                        }                
+                        context.set_focus(None);
+                        context.set_hover(self.get_type());             
                     },
                     _ => {}
                 }

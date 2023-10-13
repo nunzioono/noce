@@ -1,4 +1,4 @@
-use std::{time::Duration, sync::{Arc, RwLock}, error::Error};
+use std::{time::Duration, sync::{Arc, RwLock}, error::Error, ops::ControlFlow};
 
 use crossterm::event;
 
@@ -18,19 +18,15 @@ impl EventSystem {
 }
 
 impl EventSystem {
-    pub fn start(&self, app: Arc<RwLock<App>>, context: Arc<RwLock<AppContext>>,) -> Result<(),Box<dyn Error>>{
-        loop {
-            if let Ok(_) = event::poll(Duration::from_millis(50)) {
-                if let Ok(event) = event::read() {
-                    let mut focus = None;
-                    if let Ok(read_guard) = context.read() {
-                        focus = read_guard.focus().clone();
-                    }
-                    if let Ok(mut app_write_guard) = app.write() {        
-                        app_write_guard.handle_event(Arc::clone(&context), focus, event);
-                    }
-                }
-            }  
+    pub fn start(&self, app: &mut App, context: &mut AppContext,) -> ControlFlow<()>{
+        if let Ok(_) = event::poll(Duration::from_millis(50)) {
+            if let Ok(event) = event::read() {
+                let mut focus = None;
+                focus = context.focus().clone();
+                let res = app.handle_event(context, focus, event);
+                return res;
+            }
         }
+        ControlFlow::Continue(())
     }
 }

@@ -45,7 +45,7 @@ impl Component for ProjectComponent {
         ComponentType::Project
     }
 
-    fn handle_event(&mut self, context: Arc<RwLock<AppContext>>, event: Event) {
+    fn handle_event(&mut self, context: &mut AppContext, event: Event) {
         if let Event::Key(key) = event {
             if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat {
                 match key.code {
@@ -71,35 +71,32 @@ impl Component for ProjectComponent {
                 }
             }
             if key.kind == KeyEventKind::Press {
-                if let Ok(mut context_write_ward) = context.write() {
-                    if let Ok(context_read_ward) = context.read() {
                         match key.code {
                             KeyCode::Enter => {
                                 self.focus = self.hover;
                                 self.hover = None;
                                 let selected_item = self.contents[self.focus.unwrap() as usize].clone();
                                 if selected_item.is_dir() {
-                                    context_write_ward.set_active_folder(selected_item);
+                                    context.set_active_folder(selected_item);
                                 } else if  selected_item.is_file() {
-                                    context_write_ward.set_active_file(Some(selected_item));
+                                    context.set_active_file(Some(selected_item));
                                 }
                             },
                             KeyCode::Char(char) => {
                                 if char == 'f' && key.modifiers.contains(KeyModifiers::CONTROL) {
-                                    self.add_content(context_read_ward.active_folder(), String::from("new_file"), ContentType::FILE);
+                                    self.add_content(context.active_folder(), String::from("new_file"), ContentType::FILE);
                                 }
                                 if char == 'd' && key.modifiers.contains(KeyModifiers::CONTROL) {
-                                    self.add_content(context_read_ward.active_folder(), String::from("new_folder"), ContentType::FOLDER);
+                                    self.add_content(context.active_folder(), String::from("new_folder"), ContentType::FOLDER);
                                 }
                             },
                             KeyCode::Esc => {
-                                context_write_ward.set_focus(None);
-                                context_write_ward.set_hover(self.get_type());                   
+                                context.set_focus(None);
+                                context.set_hover(self.get_type());                   
                             }
                             _ => {}
                         }
-                    }
-                }
+
             }
         }
     }

@@ -49,7 +49,7 @@ impl Component for TerminalComponent {
         ComponentType::Terminal
     }
 
-    fn handle_event(&mut self, context: Arc<RwLock<AppContext>>, event: Event) {
+    fn handle_event(&mut self, context: &mut AppContext, event: Event) {
         
         if let Event::Key(key) = event {
             let command = &*Arc::clone(&self.current_command);
@@ -135,8 +135,6 @@ impl Component for TerminalComponent {
                         }
                     },
                     KeyCode::Enter => {
-                        if let Ok(context_read_ward) = context.read() {
-                            if let Ok(mut context_write_ward) = context.write() {
                                 if let Some(mutable_selection) = mutable_selection {
                                     if let Some(mutable_history) = mutable_history {
                                         if let Some(mutable_command) = mutable_command {
@@ -156,11 +154,11 @@ impl Component for TerminalComponent {
                                                         let folder_to_access = *command_args.get(1).unwrap();
                                                         let mut path: PathBuf = PathBuf::new();
         
-                                                        path.push(context_read_ward.active_folder());
+                                                        path.push(context.active_folder());
                                                         path.push(folder_to_access);
                                             
                                                         if path.is_dir() {
-                                                            context_write_ward.set_active_folder(path);
+                                                            context.set_active_folder(path);
                                                         }
                                                 
                                                     } else if *command_args.get(0).unwrap() == "cls" || *command_args.get(0).unwrap() == "clear" {    
@@ -173,7 +171,7 @@ impl Component for TerminalComponent {
                                                         let output = if cfg!(target_os = "windows") {
                                                             Command::new("powershell")
                                                                     .args(&["-c", command_string.as_str().clone()])
-                                                                    .current_dir(context_read_ward.active_folder().display().to_string())
+                                                                    .current_dir(context.active_folder().display().to_string())
                                                                     .stdout(Stdio::piped())
                                                                     .stderr(Stdio::piped())
                                                                     .output()
@@ -182,7 +180,7 @@ impl Component for TerminalComponent {
                                                             Command::new("sh")
                                                                     .arg("-c")
                                                                     .arg(command_string.clone())
-                                                                    .current_dir(context_read_ward.active_folder().display().to_string())
+                                                                    .current_dir(context.active_folder().display().to_string())
                                                                     .stdout(Stdio::piped())
                                                                     .stderr(Stdio::piped())
                                                                     .output()
@@ -207,13 +205,11 @@ impl Component for TerminalComponent {
                                                 }
         
                                                 mutable_command.flush();
-                                                mutable_history.add(ExecutedTerminalCommand::new(command_string, context_read_ward.active_folder().clone(), command_output.clone()));
+                                                mutable_history.add(ExecutedTerminalCommand::new(command_string, context.active_folder().clone(), command_output.clone()));
                                             }
         
                                         }
                                     }
-                                }
-                            }
                         }
                         
                     },
@@ -263,10 +259,8 @@ impl Component for TerminalComponent {
                         }
                     },
                     KeyCode::Esc => {
-                        if let Ok(mut context_write_ward) = context.write() {
-                            context_write_ward.set_focus(None);
-                            context_write_ward.set_hover(self.get_type());                                              
-                        }
+                        context.set_focus(None);
+                        context.set_hover(self.get_type());                                              
                     },
                     _ => {}
                 }
