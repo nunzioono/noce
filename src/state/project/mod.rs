@@ -1,4 +1,4 @@
-use std::{path::{PathBuf, Path}, fs::{File, create_dir, read_dir, rename}};
+use std::{path::{PathBuf, Path}, fs::{File, create_dir, read_dir, rename, remove_file, remove_dir_all}};
 
 use crossterm::event::{Event, KeyEventKind, KeyCode, KeyModifiers};
 
@@ -17,7 +17,8 @@ pub struct ProjectComponent {
     focus: Option<usize>,
     edit: bool,
     first_edit: bool,
-    edit_extension: bool
+    edit_extension: bool,
+    popup: bool
 }
 
 impl ProjectComponent {
@@ -58,6 +59,13 @@ impl ProjectComponent {
         self
     }
 
+    pub fn get_popup(&self) -> bool {
+        self.popup
+    }
+
+    pub fn set_popup(&mut self, value: bool) {
+        self.popup = value;
+    }
 }
 
 impl Component for ProjectComponent {
@@ -122,6 +130,19 @@ impl Component for ProjectComponent {
                                     self.edit = true;
                                     self.first_edit = true;
                                 }
+                            }
+                            else if char == 'x' && key.modifiers.contains(KeyModifiers::CONTROL) {
+                                //eliminate folder or file which is hovered
+                                if self.get_focus().is_none() {
+                                    let hover = self.contents[self.get_hover().clone()].clone();
+                                    if hover.is_file() {
+                                        let _ = remove_file(hover);
+                                    } else if hover.is_dir() {
+                                        let _ = remove_dir_all(hover);
+                                    }
+                                    self.popup = true;
+                                    self.update_contents(context.active_folder());
+                                }
                             } else {
                                 if self.edit {
                                     if let Some(thing) = self.contents.get(self.get_hover().clone()) {
@@ -137,7 +158,6 @@ impl Component for ProjectComponent {
                                                         to.clear();
                                                         self.first_edit = false;
                                                     } else if char == '.' && path.is_file() {
-                                                        println!("Entered extension modify mode");
                                                         //if the user pressed . and the name is not empty we want to enter in extension mode to add an extension
                                                         self.edit_extension = true;
                                                     } 
@@ -145,7 +165,6 @@ impl Component for ProjectComponent {
                                                     let _ = rename(from, to);
     
                                                 } else {
-                                                    println!("Writing {} to the extension",char);
 
                                                     if let Some(extension) = path.extension() {
                                                         if let Some(extension) = extension.to_str() {
@@ -216,7 +235,8 @@ impl ProjectComponent {
             focus: None,
             edit: false,
             first_edit: false,
-            edit_extension: false
+            edit_extension: false,
+            popup: false
         }
     }
 

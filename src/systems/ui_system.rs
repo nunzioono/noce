@@ -1,9 +1,9 @@
-use std::{error::Error, fs};
+use std::error::Error;
 
-use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Modifier, Color, Stylize}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, List, ListState}};
+use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Modifier, Color, Stylize}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, List, ListState, Clear}};
 use ratatui_textarea::{CursorMove, TextArea};
 
-use crate::state::{App, project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent, AppContext, ComponentType};
+use crate::state::{App, AppContext, ComponentType};
 
 use super::System;
 
@@ -40,17 +40,17 @@ impl UiSystem {
         let terminal_area = main_area[2];
         
         self.render_title(context, f, title_area);
-        self.render_editor(app, context, f, project_area, code_area, terminal_area, &app.get_project(), &app.get_code(), &app.get_terminal());
+        self.render_editor(app, context, f, project_area, code_area, terminal_area);
     }
     
-    fn render_editor<B: Backend>(&self, app: &App, context: &AppContext, frame: &mut Frame<B>, project_area:Rect, code_area:Rect, terminal_area:Rect, project: &ProjectComponent, code: &CodeComponent, terminal: &TerminalComponent) {
+    fn render_editor<B: Backend>(&self, app: &App, context: &AppContext, frame: &mut Frame<B>, project_area:Rect, code_area:Rect, terminal_area:Rect) {
         let mut default_style: Style = Style::new();
         default_style = default_style.blue().on_white().bold().italic();
         let history: Vec<String>;
         let context_focus: Option<ComponentType> = context.focus().clone();
         let context_hover: ComponentType = context.hover().clone(); 
 
-        history = (*terminal.get_history()).to_string().split('\n').into_iter().map(|el| el.to_string()).collect();
+        history = (app.get_terminal().get_history()).to_string().split('\n').into_iter().map(|el| el.to_string()).collect();
     
         let mut terminal_text_area = TextArea::new(history.clone());
         terminal_text_area.set_cursor_line_style(Style::default().add_modifier(Modifier::BOLD));
@@ -74,7 +74,7 @@ impl UiSystem {
             let new_block: Option<Block<'_>> = match i {
                 0 => {
                     let mut tmp = standard_block.clone().title("Project");
-                    if context_focus == Some(ComponentType::Project) {
+                    if context_focus == Some(ComponentType::Project) && !app.get_project().get_popup() {
                         tmp = tmp.style(default_style.clone());
                     } else if context_focus.is_none() && context_hover == ComponentType::Project {
                         tmp = tmp.border_style(default_style.clone());
@@ -112,7 +112,7 @@ impl UiSystem {
         }
 
         // Iterate through all elements in the `items` app and append some debug text to it.
-        let items: Vec<ListItem> = project.get_contents()
+        let items: Vec<ListItem> = app.get_project().get_contents()
         .into_iter()
         .filter(|path| path.file_name().is_some())
         .map(|path| 
@@ -129,7 +129,7 @@ impl UiSystem {
 
 
 
-        let offset = project.get_hover();
+        let offset = app.get_project().get_hover();
         let mut list_state = ListState::default();
         if context_focus == Some(ComponentType::Project) {
             list_state = list_state
@@ -143,6 +143,7 @@ impl UiSystem {
         frame.render_stateful_widget(list, project_area, &mut list_state);
         frame.render_widget(blocks.get(1).unwrap().clone(), code_area);
         frame.render_widget(terminal_text_area.widget(), terminal_area);
+        self.render_popup(frame, app);
     
     }
     
@@ -185,5 +186,40 @@ impl UiSystem {
                 .alignment(Alignment::Center),
             area,
         );
+    }
+
+    fn render_popup<B: Backend>(&self, f: &mut Frame<B>, app: &App) {
+        let size = f.size();
+    
+        if app.get_project().get_popup() {
+            let block = Block::default().title("Cancel").title_alignment(Alignment::Center).style(Style::new().blue().on_white().bold().italic()).borders(Borders::ALL);
+            let paragraph = Paragraph::new("Are you sure you want to cancel this?\n(The action is not revertable)")
+            .alignment(Alignment::Center)
+            .block(block);
+            let area = self.layout_center(80, 40, size);
+            f.render_widget(Clear, area); //this clears out the background
+            f.render_widget(paragraph, area);
+        }
+    }
+    
+    /// helper function to create a centered rect using up certain percentage of the available rect `r`
+    fn layout_center(&self, percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+        let popup_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage((100 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ])
+            .split(r);
+    
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage((100 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100 - percent_x) / 2),
+            ])
+            .split(popup_layout[1])[1]
     }
 }
