@@ -186,7 +186,6 @@ impl App {
                             return ControlFlow::Break(());
                         },
                         _ => {
-                            println!("Event got ignored!")
                         }
                         
                     }

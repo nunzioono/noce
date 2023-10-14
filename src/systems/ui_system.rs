@@ -1,6 +1,6 @@
 use std::{error::Error, fs};
 
-use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Modifier, Color, Stylize}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, canvas::Line, List, ListState}};
+use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Modifier, Color, Stylize}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, List, ListState}};
 use ratatui_textarea::{CursorMove, TextArea};
 
 use crate::state::{App, project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent, AppContext, ComponentType};
@@ -110,48 +110,37 @@ impl UiSystem {
         if let Some(block) = blocks.get(2) {
             terminal_text_area.set_block(block.clone());            
         }
-    
-        let path = context
-        .active_folder()
-        .clone();
 
         // Iterate through all elements in the `items` app and append some debug text to it.
-        let mut lines = vec![];
-
-        if let Ok(entries) = fs::read_dir(&path) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    
-                    lines.push(ListItem::new(
-                        entry.file_name().to_str().unwrap().to_string())
-                        .style(Style::default().fg(Color::White))
-                    )
-                }
-            }
-        }
+        let items: Vec<ListItem> = project.get_contents()
+        .into_iter()
+        .filter(|path| path.file_name().is_some())
+        .map(|path| 
+            ListItem::new(path.file_name().unwrap().to_str().unwrap().to_string())
+        )
+        .collect();
 
         // Create a List from all list items and highlight the currently selected one
-        let items = List::new(lines)
+        let list: List = List::new(items)
         .block(blocks.get(0).unwrap().clone())
         .highlight_style(
-            Style::default()
-                .bg(Color::Blue)
-                .add_modifier(Modifier::BOLD),
+            Style::default().white().on_blue().bold()
         );
 
-        let project_state = app.get_project();
+
+
+        let offset = project.get_hover();
         let mut list_state = ListState::default();
-        let offset = project_state.get_hover();
-        list_state = list_state.with_offset(offset.clone());
-        let selected = project_state.get_focus();
-        if let Some(selected) = selected {
-            let casted_selection = Some(selected.clone() as usize);
-            list_state = list_state.with_selected(casted_selection);
+        if context_focus == Some(ComponentType::Project) {
+            list_state = list_state
+            .with_offset(0)
+            .with_selected(Some(offset.clone()));
         }
 
-        // We can now render the item list
-        frame.render_stateful_widget(items, project_area, &mut list_state);
 
+
+        // We can now render the item list
+        frame.render_stateful_widget(list, project_area, &mut list_state);
         frame.render_widget(blocks.get(1).unwrap().clone(), code_area);
         frame.render_widget(terminal_text_area.widget(), terminal_area);
     
@@ -187,7 +176,7 @@ impl UiSystem {
         let active_file = context.active_file();
         if let Some(active) = active_file {
             if let Some(name) = active.file_name() {
-                title = title + name.to_str().unwrap();
+                title = title + " - " + name.to_str().unwrap();
             }
         }
         frame.render_widget(
