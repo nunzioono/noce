@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, path::MAIN_SEPARATOR};
 
 use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Modifier, Color, Stylize}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, List, ListState, Clear}};
 use ratatui_textarea::{CursorMove, TextArea};
@@ -114,9 +114,14 @@ impl UiSystem {
         // Iterate through all elements in the `items` app and append some debug text to it.
         let items: Vec<ListItem> = app.get_project().get_contents()
         .into_iter()
-        .filter(|path| path.file_name().is_some())
-        .map(|path| 
-            ListItem::new(path.file_name().unwrap().to_str().unwrap().to_string())
+        .map(|path| {
+                let path = path;
+                let mut name = path.file_name().unwrap().to_str().unwrap().to_string();
+                if path.is_dir() {
+                    name = name + MAIN_SEPARATOR.to_string().as_str();                        
+                }
+                ListItem::new(name)                
+            }
         )
         .collect();
 
@@ -190,15 +195,37 @@ impl UiSystem {
 
     fn render_popup<B: Backend>(&self, f: &mut Frame<B>, app: &App) {
         let size = f.size();
-    
+        let popup_size = self.layout_center(80, 40, size);
+        let popup_content = self.layout_center(99, 90, popup_size);
+        let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Ratio(8, 10), Constraint::Ratio(2, 10)])
+        .split(popup_content)
+        .to_vec();
+        let buttons_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Ratio(1,10),Constraint::Ratio(4,10),Constraint::Ratio(4,10),Constraint::Ratio(1,10),])
+        .split(popup_layout.get(1).unwrap().clone())
+        .to_vec();
+
         if app.get_project().get_popup() {
             let block = Block::default().title("Cancel").title_alignment(Alignment::Center).style(Style::new().blue().on_white().bold().italic()).borders(Borders::ALL);
-            let paragraph = Paragraph::new("Are you sure you want to cancel this?\n(The action is not revertable)")
-            .alignment(Alignment::Center)
-            .block(block);
-            let area = self.layout_center(80, 40, size);
-            f.render_widget(Clear, area); //this clears out the background
-            f.render_widget(paragraph, area);
+            let paragraph = Paragraph::new("Are you sure you want to cancel this?\n(The action is not revertable)").alignment(Alignment::Center);
+            let selected_button_style = Style::new().white().on_blue().bold().italic();
+            let mut button1 = Paragraph::new("Ok").alignment(Alignment::Center);
+            let mut button2 = Paragraph::new("Go back").alignment(Alignment::Center);
+
+            if app.get_project().get_popup_decision() {
+                button1 = button1.style(selected_button_style);   
+            } else {
+                button2 = button2.style(selected_button_style);
+            }
+
+            f.render_widget(Clear, popup_size); //this clears out the background
+            f.render_widget(block, popup_size);
+            f.render_widget(paragraph, popup_layout.get(0).unwrap().clone());
+            f.render_widget(button1, buttons_layout.get(1).unwrap().clone());
+            f.render_widget(button2, buttons_layout.get(2).unwrap().clone());
         }
     }
     

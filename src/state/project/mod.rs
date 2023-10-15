@@ -18,7 +18,8 @@ pub struct ProjectComponent {
     edit: bool,
     first_edit: bool,
     edit_extension: bool,
-    popup: bool
+    popup: bool,
+    popup_decision: bool,
 }
 
 impl ProjectComponent {
@@ -29,7 +30,8 @@ impl ProjectComponent {
         if let Ok(entries) = read_dir(active_folder) {
             for entry in entries {
                 if let Ok(entry) = entry {
-                    self.contents.push(entry.path());
+                    let path = entry.path();
+                    self.contents.push(path);
                 }
             }
         }
@@ -66,6 +68,11 @@ impl ProjectComponent {
     pub fn set_popup(&mut self, value: bool) {
         self.popup = value;
     }
+
+    pub fn get_popup_decision(&self) -> bool {
+        self.popup_decision
+    }
+
 }
 
 impl Component for ProjectComponent {
@@ -78,6 +85,16 @@ impl Component for ProjectComponent {
         if let Event::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
+                    KeyCode::Left => {
+                        if self.popup {
+                            self.popup_decision = true;
+                        }
+                    },
+                    KeyCode::Right => {
+                        if self.popup {
+                            self.popup_decision = false;
+                        }
+                    },
                     KeyCode::Up => {
                         if !self.edit {
                             if self.get_hover() > &0 {
@@ -97,7 +114,8 @@ impl Component for ProjectComponent {
                         }
                     },
                     KeyCode::Enter => {
-                        if !self.edit {
+                        if !self.popup {
+                                                    if !self.edit {
                             self.set_focus(self.get_hover().clone());
 
                             if let Some(focus) = self.get_focus() {
@@ -114,6 +132,21 @@ impl Component for ProjectComponent {
                             self.edit = false;
                             self.edit_extension = false;
                         }
+                    } else {
+                        if self.popup_decision {
+                            let hover = self.contents[self.get_hover().clone()].clone();
+                            if hover.is_file() {
+                                let _ = remove_file(hover);
+                            } else if hover.is_dir() {
+                                let _ = remove_dir_all(hover);
+                            }
+                        }
+                        self.popup = false;
+
+                        self.update_contents(context.active_folder());
+
+                    }
+
 
                     },
                     KeyCode::Char(char) => {
@@ -134,14 +167,7 @@ impl Component for ProjectComponent {
                             else if char == 'x' && key.modifiers.contains(KeyModifiers::CONTROL) {
                                 //eliminate folder or file which is hovered
                                 if self.get_focus().is_none() {
-                                    let hover = self.contents[self.get_hover().clone()].clone();
-                                    if hover.is_file() {
-                                        let _ = remove_file(hover);
-                                    } else if hover.is_dir() {
-                                        let _ = remove_dir_all(hover);
-                                    }
                                     self.popup = true;
-                                    self.update_contents(context.active_folder());
                                 }
                             } else {
                                 if self.edit {
@@ -236,7 +262,8 @@ impl ProjectComponent {
             edit: false,
             first_edit: false,
             edit_extension: false,
-            popup: false
+            popup: false,
+            popup_decision: true
         }
     }
 
