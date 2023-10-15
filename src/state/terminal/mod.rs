@@ -53,7 +53,7 @@ impl Component for TerminalComponent {
         
         if let Event::Key(key) = event {
             let command = &*Arc::clone(&self.current_command);
-            let history = &*Arc::clone(&self.commands_history);
+            //let history = &*Arc::clone(&self.commands_history);
             let selection = &*Arc::clone(&self.selection);
             let mutable_command = Arc::get_mut(&mut self.current_command);
             let mutable_history = Arc::get_mut(&mut self.commands_history);

@@ -1,23 +1,23 @@
-use std::{fmt::{self}, ops::Add};
+use std::{fmt::{self}, ops::Add, path::PathBuf, fs::File, io::Read};
 
 
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct Line {
-    number: u16,
+    number: usize,
     line: String,
 }
 
 impl Line {
-    pub fn new(number: u16, line: String) -> Line {
+    pub fn new(number: usize, line: String) -> Line {
         Line { number, line }
     }
 
-    pub fn set_number(&mut self, number: u16) {
+    pub fn set_number(&mut self, number: usize) {
         self.number = number;
     }
 
-    pub fn get_number(&self) -> u16 {
+    pub fn get_number(&self) -> usize {
         self.number
     }
 
@@ -33,8 +33,8 @@ impl Line {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Code {
     content: Vec<Line>,
-    x: u16,
-    y: u16
+    x: usize,
+    y: usize
 }
 
 impl fmt::Display for Code {
@@ -56,29 +56,44 @@ impl Add<Line> for Code {
 }
 
 impl Code {
-    pub fn new() -> Code {
-        Code { content: Vec::new(), x: 0, y: 0 }
+    pub fn new(active_file: Option<PathBuf>) -> Code {
+        let mut lines = Vec::new();
+        if let Some(path) = active_file {
+            let file = File::open(path);
+            if let Ok(mut file) = file {
+                let mut contents = String::new();
+                let _ = file.read_to_string(&mut contents);
+                contents
+                .split("\n")
+                .enumerate()
+                .for_each(|tuple| {
+                    let line = Line::new(tuple.0, tuple.1.to_string());
+                    lines.push(line);
+                })
+            }
+        }
+        Code { content: lines, x: 0, y: 0 }
     }
 
-    pub fn get_x(&self) -> u16 {
+    pub fn get_x(&self) -> usize {
         self.x
     } 
 
-    pub fn get_y(&self) -> u16 {
+    pub fn get_y(&self) -> usize {
         self.y
     } 
 
-    pub fn set_x(&mut self, x: u16) -> &mut Self {
+    pub fn set_x(&mut self, x: usize) -> &mut Self {
         self.x = x;
         self
     } 
 
-    pub fn set_y(&mut self, y: u16) -> &mut Self {
+    pub fn set_y(&mut self, y: usize) -> &mut Self {
         self.y = y;
         self
     } 
     
-    pub fn remove_line(&mut self, number: u16) -> &mut Code {
+    pub fn remove_line(&mut self, number: usize) -> &mut Code {
         self.content.retain(|line| line.number != number);
         self
     }
@@ -88,7 +103,7 @@ impl Code {
         self
     }
 
-    pub fn change_line(&mut self, number: u16, new_value: String) -> &mut Code {
+    pub fn change_line(&mut self, number: usize, new_value: String) -> &mut Code {
         for line in &mut self.content {
             if line.number == number {
                 line.line = new_value;
@@ -113,12 +128,12 @@ impl Code {
         self
     }
 
-    pub fn get_line(&self, number: u16) -> Option<&Line> {
+    pub fn get_line(&self, number: usize) -> Option<&Line> {
         self.content.iter().find(|line| line.number == number)
     }
 
-    pub fn get_content(&self) -> Vec<Line> {
-        self.content.clone()
+    pub fn get_content(&self) -> &Vec<Line> {
+        &self.content
     }
 
 }

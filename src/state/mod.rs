@@ -110,7 +110,7 @@ impl Default for App {
 
         App {
             project: ProjectComponent::new(env::current_dir().unwrap().to_path_buf()),
-            code: CodeComponent::new(Code::new()),
+            code: CodeComponent::new(Code::new(None)),
             terminal: TerminalComponent::new()
         }
     }
@@ -118,7 +118,7 @@ impl Default for App {
 
 impl App {
 
-    pub fn new(project: ProjectComponent, code: CodeComponent, terminal: TerminalComponent, path: PathBuf) -> App {
+    pub fn new(_project: ProjectComponent, code: CodeComponent, terminal: TerminalComponent, path: PathBuf) -> App {
 
         App {
             project: ProjectComponent::new(path),
@@ -137,6 +137,10 @@ impl App {
 
     pub fn get_terminal(&self) -> &TerminalComponent {
         &self.terminal
+    }
+
+    pub fn get_mut_code(&mut self) -> &mut CodeComponent {
+        &mut self.code
     }
 
     pub fn handle_event(&mut self, context: &mut AppContext, focus: Option<ComponentType>, event: Event) -> ControlFlow<()>{

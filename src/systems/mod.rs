@@ -46,7 +46,8 @@ pub fn start(mut app: App, mut context: AppContext) -> Result<(), Box<dyn Error>
                     break;
                 },
                 _ => {}
-            }              
+            }
+            app.get_mut_code().set_current(context.active_file().clone());              
         }
 
         // restore terminal

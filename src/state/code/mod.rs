@@ -2,7 +2,7 @@ pub mod code_history;
 pub mod code_selection;
 pub mod code;
 
-use std::{fs::{File, OpenOptions}, io::Write, error::Error};
+use std::{fs::{File, OpenOptions}, io::Write, error::Error, path::PathBuf};
 use self::{code::{Code, Line}, code_history::CodeHistory, code_selection::CodeSelection};
 use clipboard::{ClipboardProvider, ClipboardContext};
 use crossterm::event::{KeyEventKind, Event, KeyCode, KeyModifiers, ModifierKeyCode};
@@ -32,7 +32,7 @@ impl Component for CodeComponent {
                         char_normalized = char_normalized.to_lowercase().to_string();
                         if char_normalized == "x" && key.modifiers.contains(KeyModifiers::CONTROL) {
                             let mut cut = String::default();
-                            if let Some(selection) = self.selection.as_ref() {
+                            if let Some(selection) = self.selection.as_mut() {
                                 if selection.is_selecting() {
                                     let code = selection.get_selection();
                                     cut = code.to_string();
@@ -45,7 +45,7 @@ impl Component for CodeComponent {
                             self.selection = None;
                         } else if char_normalized == "c" && key.modifiers.contains(KeyModifiers::CONTROL) {
                             let mut copy = String::default();
-                            if let Some(selection) = self.selection.as_ref() {
+                            if let Some(selection) = self.selection.as_mut() {
                                 if selection.is_selecting() {
                                     let code = selection.get_selection();
                                     copy = code.to_string()
@@ -155,7 +155,7 @@ impl Component for CodeComponent {
                             if let Some(current_line) = selection.get_selection().get_line(self.current.get_x()) {
                                 if self.current.get_y() > 0 {
                                     let new_value = current_line.get_string().chars().enumerate()
-                                    .filter(|tuple| (tuple.0 as u16) < self.current.get_y() - 1)
+                                    .filter(|tuple| tuple.0 < self.current.get_y() - 1)
                                     .map(|tuple| tuple.1)
                                     .fold(String::default(), |mut char1, char2| {
                                         char1.push(char2);
@@ -170,9 +170,9 @@ impl Component for CodeComponent {
                     KeyCode::Modifier(ModifierKeyCode::RightShift) => {
                         if let Some(selection) = &mut self.selection {
                             if let Some(current_line) = selection.get_selection().get_line(self.current.get_x()) {
-                                if self.current.get_y() < (current_line.get_string().len()-1) as u16 {
+                                if self.current.get_y() < current_line.get_string().len()-1 {
                                     let new_value = current_line.get_string().chars().enumerate()
-                                    .filter(|tuple| (tuple.0 as u16) < self.current.get_y() + 1)
+                                    .filter(|tuple| tuple.0 < self.current.get_y() + 1)
                                     .map(|tuple| tuple.1).fold(String::default(), |mut char1, char2| {
                                         char1.push(char2);
                                         char1
@@ -260,5 +260,21 @@ impl CodeComponent {
             history: CodeHistory::new(code),
             selection: None,
         }
+    }
+
+    pub fn set_current(&mut self, active_file: Option<PathBuf>) {
+        self.current = Code::new(active_file);
+    }
+
+    pub fn get_current(&self) -> &Code {
+        &self.current
+    }
+
+    pub fn get_history(&self) -> &CodeHistory {
+        &self.history
+    }
+
+    pub fn get_selection(&self) -> &Option<CodeSelection> {
+        &self.selection
     }
 }

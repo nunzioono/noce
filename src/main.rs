@@ -11,7 +11,7 @@ fn main() {
     let context = AppContext::default();
     let app = App::new(
         ProjectComponent::new(context.active_folder().to_path_buf()),
-        CodeComponent::new(Code::new()),
+        CodeComponent::new(Code::new(context.active_file().clone())),
         TerminalComponent::new(),
         context.active_folder().clone());
 

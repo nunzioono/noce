@@ -1,7 +1,6 @@
 use std::{error::Error, path::MAIN_SEPARATOR};
 
-use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Modifier, Color, Stylize}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, List, ListState, Clear}};
-use ratatui_textarea::{CursorMove, TextArea};
+use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Stylize}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, List, ListState, Clear}};
 
 use crate::state::{App, AppContext, ComponentType};
 
@@ -40,76 +39,15 @@ impl UiSystem {
         let terminal_area = main_area[2];
         
         self.render_title(context, f, title_area);
-        self.render_editor(app, context, f, project_area, code_area, terminal_area);
+        self.render_project(app, context, f, project_area);
+        self.render_code(app, context, f, code_area);
+        self.render_terminal(app, context, f, terminal_area);
+        self.render_popup(f, app);
     }
     
-    fn render_editor<B: Backend>(&self, app: &App, context: &AppContext, frame: &mut Frame<B>, project_area:Rect, code_area:Rect, terminal_area:Rect) {
-        let mut default_style: Style = Style::new();
-        default_style = default_style.blue().on_white().bold().italic();
-        let history: Vec<String>;
+    fn render_project<B: Backend>(&self, app: &App, context: &AppContext, frame: &mut Frame<B>, project_area:Rect) {
         let context_focus: Option<ComponentType> = context.focus().clone();
-        let context_hover: ComponentType = context.hover().clone(); 
-
-        history = (app.get_terminal().get_history()).to_string().split('\n').into_iter().map(|el| el.to_string()).collect();
-    
-        let mut terminal_text_area = TextArea::new(history.clone());
-        terminal_text_area.set_cursor_line_style(Style::default().add_modifier(Modifier::BOLD));
-        if context_focus.is_some() && context_focus != Some(ComponentType::Terminal) {
-            terminal_text_area.set_cursor_style(Style::default().fg(Color::Black))
-        }
-        terminal_text_area.move_cursor(CursorMove::End);
-        /*if app.terminal_updated {
-            terminal_text_area.scroll(Scrolling::Delta { rows: vec_content.len() as i16 - 2, cols: 0 });
-            terminal_text_area.move_cursor(CursorMove::Jump(vec_content.len() as u16 - 2, (vec_content.get(vec_content.len() - 2).unwrap().len() as u16)+1))
-        }*/
-    
-        let standard_block = Block::new()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Plain);
-
-        let mut blocks: Vec<Block<'_>> = vec![];
-
-        for i in 0..3 {     
-    
-            let new_block: Option<Block<'_>> = match i {
-                0 => {
-                    let mut tmp = standard_block.clone().title("Project");
-                    if context_focus == Some(ComponentType::Project) && !app.get_project().get_popup() {
-                        tmp = tmp.style(default_style.clone());
-                    } else if context_focus.is_none() && context_hover == ComponentType::Project {
-                        tmp = tmp.border_style(default_style.clone());
-                    }
-                    Some(tmp)
-                },
-                1 => {
-                    let mut tmp = standard_block.clone().title("Code");
-                    if context_focus == Some(ComponentType::Code) {
-                        tmp = tmp.style(default_style.clone());
-                    } else if context_focus.is_none() && context_hover == ComponentType::Code {
-                        tmp = tmp.border_style(default_style.clone());
-                    }
-                    Some(tmp)
-                },
-                2 => {
-                    let mut tmp = standard_block.clone().title("Terminal");
-                    if context_focus == Some(ComponentType::Terminal) {
-                        tmp = tmp.style(default_style.clone());
-                    } else if context_focus.is_none() && context_hover == ComponentType::Terminal {
-                        tmp = tmp.border_style(default_style.clone());
-                    }
-                    Some(tmp)
-                },
-                _ => {None}
-            };
-            
-            if let Some(new_block) = new_block {
-                blocks.push(new_block.clone());
-            }
-    
-        }
-        if let Some(block) = blocks.get(2) {
-            terminal_text_area.set_block(block.clone());            
-        }
+        let context_hover: ComponentType = context.hover().clone();
 
         // Iterate through all elements in the `items` app and append some debug text to it.
         let items: Vec<ListItem> = app.get_project().get_contents()
@@ -125,13 +63,25 @@ impl UiSystem {
         )
         .collect();
 
+        let mut block = Block::new()
+        .title("Project")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Plain);
+
+        let style = Style::new().blue().on_white().bold().italic();
+        if context_focus == Some(ComponentType::Project) && !app.get_project().get_popup() {
+            block = block.style(style);
+        } else if context_focus.is_none() && context_hover == ComponentType::Project {
+            block = block.border_style(style);
+        }
+
         // Create a List from all list items and highlight the currently selected one
         let list: List = List::new(items)
-        .block(blocks.get(0).unwrap().clone())
+        .block(block)
         .highlight_style(
             Style::default().white().on_blue().bold()
         );
-
+        
 
 
         let offset = app.get_project().get_hover();
@@ -146,12 +96,92 @@ impl UiSystem {
 
         // We can now render the item list
         frame.render_stateful_widget(list, project_area, &mut list_state);
-        frame.render_widget(blocks.get(1).unwrap().clone(), code_area);
-        frame.render_widget(terminal_text_area.widget(), terminal_area);
-        self.render_popup(frame, app);
-    
+        
     }
+
+    fn render_code<B: Backend>(&self, app: &App, context: &AppContext, frame: &mut Frame<B>, code_area: Rect) {
+        let context_focus: Option<ComponentType> = context.focus().clone();
+        let context_hover: ComponentType = context.hover().clone();
+        let area = self.layout_center(90, 95, code_area);
+        let layout_code = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Ratio(1, 10),Constraint::Ratio(9, 10)])
+        .split(area)
+        .to_vec();
     
+        let mut block = Block::new()
+        .title("Code")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Plain);
+
+        let style = Style::new().blue().on_white().bold().italic();
+        if context_focus == Some(ComponentType::Code){
+            block = block.style(style);
+        } else if context_focus.is_none() && context_hover == ComponentType::Code {
+            block = block.border_style(style);
+        }
+
+        let code = app
+        .get_code()
+        .get_current()
+        .get_content();
+
+        let lines: Vec<ListItem> = code
+        .into_iter()
+        .map(|line| {
+            ListItem::new(line.get_string())
+        })
+        .collect();
+
+        let numbers: Vec<ListItem>= code
+        .into_iter()
+        .map(|line| {
+            ListItem::new(line.get_number().to_string())
+        })
+        .collect();
+
+        let offset = app.get_code().get_current().get_x();
+        let mut list_state = ListState::default();
+        if context_focus == Some(ComponentType::Project) {
+            list_state = list_state
+            .with_offset(0)
+            .with_selected(Some(offset.clone()));
+        }
+
+        let list_lines: List = List::new(lines)
+        .highlight_style(
+            Style::default().white().on_blue().bold()
+        );
+
+        let list_numbers: List = List::new(numbers)
+        .highlight_style(
+            Style::default().white().on_blue().bold()
+        );
+
+        frame.render_widget(block, code_area);
+        frame.render_stateful_widget(list_numbers, layout_code.get(0).unwrap().clone(), &mut list_state);
+        frame.render_stateful_widget(list_lines, layout_code.get(1).unwrap().clone(), &mut list_state);
+
+    }
+
+    fn render_terminal<B: Backend>(&self,_app: &App, context: &AppContext, frame: &mut Frame<B>, terminal_area: Rect) {
+        let context_focus: Option<ComponentType> = context.focus().clone();
+        let context_hover: ComponentType = context.hover().clone();
+
+        let mut block = Block::new()
+        .title("Terminal")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Plain);
+
+        let style = Style::new().blue().on_white().bold().italic();
+        if context_focus == Some(ComponentType::Terminal){
+            block = block.style(style);
+        } else if context_focus.is_none() && context_hover == ComponentType::Terminal {
+            block = block.border_style(style);
+        }
+
+        frame.render_widget(block, terminal_area);
+    }
     /// Calculate the layout of the UI elements.
     ///
     /// Returns a tuple of the title area and the main areas.

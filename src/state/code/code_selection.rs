@@ -83,8 +83,8 @@ impl CodeSelection {
         self.lines.clear();
     }
 
-    pub fn get_selection(&self) -> Code {
-        let mut code = Code::new();
+    pub fn get_selection(&mut self) -> Code {
+        let code = &mut self.code;
 
         self.lines.clone().into_iter()
         .map(|line_selection|
@@ -97,7 +97,7 @@ impl CodeSelection {
             })))
         .for_each(|line| {let _ = code.add_line(line);});
 
-        code
+        code.clone()
     }
 }
 

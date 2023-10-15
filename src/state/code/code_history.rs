@@ -2,18 +2,18 @@ use super::code::{Line, Code};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Change {
-    number: u16,
+    number: usize,
     from: String,
     to: String,
 }
 
 trait ChangeBuilder {
-    fn create_change_with_strings(number: u16, from: String, to: String) -> Change;
+    fn create_change_with_strings(number: usize, from: String, to: String) -> Change;
     fn create_change_with_line(line: Line, to: String) -> Change;
 }
 
 impl ChangeBuilder for Change {
-    fn create_change_with_strings(number: u16, from: String, to: String) -> Change {
+    fn create_change_with_strings(number: usize, from: String, to: String) -> Change {
         Change { number, from, to }
     }
 
@@ -28,7 +28,7 @@ impl ChangeBuilder for Change {
 
 impl Change {
 
-    pub fn get_number(&self) -> u16 {
+    pub fn get_number(&self) -> usize {
         self.number
     }
 

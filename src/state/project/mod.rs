@@ -126,6 +126,7 @@ impl Component for ProjectComponent {
                                     self.update_contents(&selected_item)
                                 } else if  selected_item.is_file() {
                                     context.set_active_file(Some(selected_item));
+                                    
                                 }                                    
                             }    
                         } else {
