@@ -2,7 +2,7 @@ pub mod code_history;
 pub mod code_selection;
 pub mod code;
 
-use std::{fs::{File, OpenOptions}, io::Write, error::Error, path::PathBuf};
+use std::{fs::{File, OpenOptions}, io::{Write, Read}, error::Error, path::PathBuf};
 use self::{code::{Code, Line}, code_history::CodeHistory, code_selection::CodeSelection};
 use clipboard::{ClipboardProvider, ClipboardContext};
 use crossterm::event::{KeyEventKind, Event, KeyCode, KeyModifiers, ModifierKeyCode};
@@ -139,10 +139,18 @@ impl Component for CodeComponent {
                         }
                     },
                     KeyCode::Up => {
-                        self.current.set_x(self.current.get_x() - 1);
+                        let mut current_line = self.current.get_x();
+                        if current_line > 0 {
+                            current_line -= 1;
+                            self.current.set_x(current_line);
+                        }
                     },
                     KeyCode::Down => {
-                        self.current.set_x(self.current.get_x() + 1);
+                        let mut current_line = self.current.get_x();
+                        if current_line < self.current.get_content().len() - 1 {
+                            current_line += 1;
+                            self.current.set_x(current_line);
+                        }
                     },
                     KeyCode::Left => {
                         self.current.set_y(self.current.get_y() - 1);
@@ -254,16 +262,30 @@ impl Component for CodeComponent {
 
 impl CodeComponent {
 
-    pub fn new(code: Code) -> Self {
+    pub fn new() -> Self {
+        let code = Code::new();
         CodeComponent {
             current: code.clone(),
-            history: CodeHistory::new(code),
+            history: CodeHistory::new(code.clone()),
             selection: None,
         }
     }
 
     pub fn set_current(&mut self, active_file: Option<PathBuf>) {
-        self.current = Code::new(active_file);
+        if let Some(path) = active_file {
+            let file = File::open(path);
+            if let Ok(mut file) = file {
+                let mut contents = String::new();
+                let _ = file.read_to_string(&mut contents);
+                contents
+                .split("\n")
+                .enumerate()
+                .for_each(|tuple| {
+                    let line = Line::new(tuple.0, tuple.1.to_string());
+                    self.current.add_line(line);
+                })
+            }
+        }
     }
 
     pub fn get_current(&self) -> &Code {

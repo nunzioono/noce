@@ -5,13 +5,13 @@ pub mod  unit_tests;
 use state::{AppContext, App};
 use systems::start;
 
-use crate::state::{project::ProjectComponent, code::{CodeComponent, code::Code}, terminal::TerminalComponent};
+use crate::state::{project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent};
 
 fn main() {
     let context = AppContext::default();
     let app = App::new(
         ProjectComponent::new(context.active_folder().to_path_buf()),
-        CodeComponent::new(Code::new(context.active_file().clone())),
+        CodeComponent::new(),
         TerminalComponent::new(),
         context.active_folder().clone());
 

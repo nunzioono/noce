@@ -1,4 +1,4 @@
-use std::{fmt::{self}, ops::Add, path::PathBuf, fs::File, io::Read};
+use std::{fmt::{self}, ops::Add};
 
 
 
@@ -56,23 +56,8 @@ impl Add<Line> for Code {
 }
 
 impl Code {
-    pub fn new(active_file: Option<PathBuf>) -> Code {
-        let mut lines = Vec::new();
-        if let Some(path) = active_file {
-            let file = File::open(path);
-            if let Ok(mut file) = file {
-                let mut contents = String::new();
-                let _ = file.read_to_string(&mut contents);
-                contents
-                .split("\n")
-                .enumerate()
-                .for_each(|tuple| {
-                    let line = Line::new(tuple.0, tuple.1.to_string());
-                    lines.push(line);
-                })
-            }
-        }
-        Code { content: lines, x: 0, y: 0 }
+    pub fn new() -> Code {
+        Code { content: vec![], x: 0, y: 0 }
     }
 
     pub fn get_x(&self) -> usize {

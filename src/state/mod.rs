@@ -2,7 +2,7 @@ use std::{path::PathBuf, ops::ControlFlow, env::{current_dir, self}};
 
 use crossterm::event::{Event, KeyEventKind, KeyCode};
 
-use self::{project::ProjectComponent, code::{CodeComponent, code::Code}, terminal::TerminalComponent};
+use self::{project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent};
 
 pub mod code;
 pub mod project;
@@ -24,6 +24,7 @@ pub trait Component {
 pub struct AppContext {
     active_folder: PathBuf,
     active_file: Option<PathBuf>,
+    active_file_changed: bool,
     focus: Option<ComponentType>,
     hover: ComponentType,
 }
@@ -40,6 +41,7 @@ impl Default for AppContext {
         AppContext {
             active_folder: folder,
             active_file: None,
+            active_file_changed: false,
             focus: None,
             hover: ComponentType::Project,
         }
@@ -51,6 +53,7 @@ impl AppContext {
         AppContext {
             active_folder: active_folder,
             active_file: active_file,
+            active_file_changed: false,
             focus: focus,
             hover: hover,
         }
@@ -74,8 +77,17 @@ impl AppContext {
     // Setter for active_file
     pub fn set_active_file(&mut self, path: Option<PathBuf>) {
         self.active_file = path;
+        self.active_file_changed = true;
     }
 
+    pub fn active_file_changed(&self) -> bool {
+        self.active_file_changed
+    }
+
+    pub fn set_active_file_changed(&mut self, change: bool) {
+        self.active_file_changed = change;
+    }
+    
     // Getter for focus
     pub fn focus(&self) -> &Option<ComponentType> {
         &self.focus
@@ -110,7 +122,7 @@ impl Default for App {
 
         App {
             project: ProjectComponent::new(env::current_dir().unwrap().to_path_buf()),
-            code: CodeComponent::new(Code::new(None)),
+            code: CodeComponent::new(),
             terminal: TerminalComponent::new()
         }
     }
