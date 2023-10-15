@@ -102,7 +102,7 @@ impl UiSystem {
     fn render_code<B: Backend>(&self, app: &App, context: &AppContext, frame: &mut Frame<B>, code_area: Rect) {
         let context_focus: Option<ComponentType> = context.focus().clone();
         let context_hover: ComponentType = context.hover().clone();
-        let area = self.layout_center(90, 95, code_area);
+        let area = self.layout_center(90, 94, code_area);
         let layout_code = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Ratio(1, 10),Constraint::Ratio(9, 10)])
@@ -136,13 +136,13 @@ impl UiSystem {
         let numbers: Vec<ListItem>= code
         .into_iter()
         .map(|line| {
-            ListItem::new(line.get_number().to_string())
+            ListItem::new((line.get_number()+1).to_string())
         })
         .collect();
 
         let offset = app.get_code().get_current().get_x();
         let mut list_state = ListState::default();
-        if context_focus == Some(ComponentType::Project) {
+        if context_focus == Some(ComponentType::Code) {
             list_state = list_state
             .with_offset(0)
             .with_selected(Some(offset.clone()));
