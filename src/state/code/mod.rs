@@ -141,22 +141,52 @@ impl Component for CodeComponent {
                     KeyCode::Up => {
                         let mut current_line = self.current.get_x();
                         if current_line > 0 {
+                            self.current.remove_cursor();
                             current_line -= 1;
                             self.current.set_x(current_line);
+                            if let Some(line) = self.current.get_content().get(current_line) {
+                                if line.get_string().len() < self.get_current().get_y() {
+                                    self.current.set_y(line.get_string().len() - 1);
+                                }
+                            }
+                            self.current.set_cursor();
                         }
                     },
                     KeyCode::Down => {
                         let mut current_line = self.current.get_x();
                         if current_line < self.current.get_content().len() - 1 {
+                            self.current.remove_cursor();
                             current_line += 1;
                             self.current.set_x(current_line);
+                            if let Some(line) = self.current.get_content().get(current_line) {
+                                if line.get_string().len() < self.get_current().get_y() {
+                                    self.current.set_y(line.get_string().len() - 1);
+                                }
+                            }
+                            self.current.set_cursor();
+
                         }
                     },
                     KeyCode::Left => {
-                        self.current.set_y(self.current.get_y() - 1);
+                        let mut current_char = self.current.get_y();
+                        if current_char > 0 {
+                            self.current.remove_cursor();
+                            current_char -= 1;
+                            self.current.set_y(current_char);
+                            self.current.set_cursor();
+                        }
                     },
                     KeyCode::Right => {
-                        self.current.set_y(self.current.get_y() + 1);
+                        let actual_code = self.get_current();
+                        let mut current_char = self.current.get_y();
+                        if let Some(line) = actual_code.get_content().get(actual_code.get_x()) {
+                            if current_char < line.get_string().len() - 1{
+                                self.current.remove_cursor();
+                                current_char += 1;
+                                self.current.set_y(current_char);
+                                self.current.set_cursor();
+                            }
+                        }
                     },
                     KeyCode::Modifier(ModifierKeyCode::LeftShift) => {
                         if let Some(selection) = &mut self.selection {
@@ -242,16 +272,54 @@ impl Component for CodeComponent {
                         }
                     },
                     KeyCode::Up => {
-                        self.current.set_x(self.current.get_x() - 1);
+                        let mut current_line = self.current.get_x();
+                        if current_line > 0 {
+                            self.current.remove_cursor();
+                            current_line -= 1;
+                            self.current.set_x(current_line);
+                            if let Some(line) = self.current.get_content().get(current_line) {
+                                if line.get_string().len() < self.get_current().get_y() {
+                                    self.current.set_y(line.get_string().len() - 1);
+                                }
+                            }
+                            self.current.set_cursor();
+                        }
                     },
                     KeyCode::Down => {
-                        self.current.set_x(self.current.get_x() + 1);
+                        let mut current_line = self.current.get_x();
+                        if current_line < self.current.get_content().len() - 1 {
+                            self.current.remove_cursor();
+                            current_line += 1;
+                            self.current.set_x(current_line);
+                            if let Some(line) = self.current.get_content().get(current_line) {
+                                if line.get_string().len() < self.get_current().get_y() {
+                                    self.current.set_y(line.get_string().len() - 1);
+                                }
+                            }
+                            self.current.set_cursor();
+
+                        }
                     },
                     KeyCode::Left => {
-                        self.current.set_y(self.current.get_y() - 1);
+                        let mut current_char = self.current.get_y();
+                        if current_char > 0 {
+                            self.current.remove_cursor();
+                            current_char -= 1;
+                            self.current.set_y(current_char);
+                            self.current.set_cursor();
+                        }
                     },
                     KeyCode::Right => {
-                        self.current.set_y(self.current.get_y() + 1);
+                        let actual_code = self.get_current();
+                        let mut current_char = self.current.get_y();
+                        if let Some(line) = actual_code.get_content().get(actual_code.get_x()) {
+                            if current_char < line.get_string().len() - 1{
+                                self.current.remove_cursor();
+                                current_char += 1;
+                                self.current.set_y(current_char);
+                                self.current.set_cursor();
+                            }
+                        }
                     },
                     _ => {}
                 }
@@ -285,11 +353,16 @@ impl CodeComponent {
                     self.current.add_line(line);
                 })
             }
+            self.current.set_cursor();
         }
     }
 
     pub fn get_current(&self) -> &Code {
         &self.current
+    }
+
+    pub fn get_mut_current(&mut self) -> &mut Code {
+        &mut self.current
     }
 
     pub fn get_history(&self) -> &CodeHistory {

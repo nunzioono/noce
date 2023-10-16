@@ -33,6 +33,7 @@ impl Line {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Code {
     content: Vec<Line>,
+    cursor_displayed: bool,
     x: usize,
     y: usize
 }
@@ -57,7 +58,15 @@ impl Add<Line> for Code {
 
 impl Code {
     pub fn new() -> Code {
-        Code { content: vec![], x: 0, y: 0 }
+        Code { content: vec![], cursor_displayed: false, x: 0, y: 0 }
+    }
+
+    pub fn flush(&mut self) {
+        self.content.clear()
+    }
+
+    pub fn is_cursor_displayed(&self) -> bool {
+        self.cursor_displayed
     }
 
     pub fn get_x(&self) -> usize {
@@ -119,6 +128,28 @@ impl Code {
 
     pub fn get_content(&self) -> &Vec<Line> {
         &self.content
+    }
+
+    pub fn set_cursor(&mut self) {
+        if !self.cursor_displayed {
+            if let Some(line) = self.content.get(self.get_x()) {
+                let mut line_with_cursor = line.get_string().clone();
+                line_with_cursor.insert(self.get_y(), '|');
+                self.change_line_at_cursor(line_with_cursor);
+                self.cursor_displayed = true;
+            }
+        }        
+    }
+
+    pub fn remove_cursor(&mut self) {
+        if self.cursor_displayed {
+            if let Some(line) = self.content.get(self.get_x()) {
+                let mut line_without_cursor = line.get_string().clone();
+                line_without_cursor.remove(self.get_y());
+                self.change_line_at_cursor(line_without_cursor);
+                self.cursor_displayed = false;
+            }
+        }
     }
 
 }

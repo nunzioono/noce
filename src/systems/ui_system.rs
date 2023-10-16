@@ -24,9 +24,9 @@ impl System for UiSystem {
 }
 
 impl UiSystem {
-    pub fn start<B: Backend>(&self, terminal: &mut Terminal<B>,
+    pub fn tick<B: Backend>(&self, terminal: &mut Terminal<B>,
         app: &App,
-        context: &AppContext
+        context: &AppContext,
     ) -> Result<(),Box<dyn Error>> {
         terminal.draw(|f| self.ui(f, app, context))?;
         Ok(())

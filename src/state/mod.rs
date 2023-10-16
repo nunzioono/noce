@@ -1,4 +1,4 @@
-use std::{path::PathBuf, ops::ControlFlow, env::{current_dir, self}};
+use std::{path::PathBuf, env::{current_dir, self}};
 
 use crossterm::event::{Event, KeyEventKind, KeyCode};
 
@@ -155,7 +155,7 @@ impl App {
         &mut self.code
     }
 
-    pub fn handle_event(&mut self, context: &mut AppContext, focus: Option<ComponentType>, event: Event) -> ControlFlow<()>{
+    pub fn handle_event(&mut self, context: &mut AppContext, focus: Option<ComponentType>, event: Event) -> bool {
 
 
         if focus.is_some() {
@@ -199,7 +199,7 @@ impl App {
                             context.set_focus(Some(context.hover().clone()));
                         },
                         KeyCode::Esc => {
-                            return ControlFlow::Break(());
+                            return false;
                         },
                         _ => {
                         }
@@ -208,7 +208,7 @@ impl App {
                 }    
             }
         }
-        ControlFlow::Continue(()) 
+        true
   
 
     }
