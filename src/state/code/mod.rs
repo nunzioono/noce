@@ -126,17 +126,14 @@ impl Component for CodeComponent {
                         self.current.change_line(last_line.get_number(), last_line.get_string()[..last_line.get_string().len()-1].to_string());
                     },
                     KeyCode::Enter => {
-                        let last_number = self.current.get_content().into_iter().map(|x| x.get_number()).fold(0, |line1, line2| {
-                            if line1 > line2 { line1 } else { line2 }
-                        });
-                        let last_line = self.current.get_line(last_number);
+                        let last_line_number = self.get_current().get_content().len().clone() - 1;
+                        let last_line = self.get_current().get_content().get(last_line_number);
+                        let mut last_line_string = String::default();
                         if let Some(last_line) = last_line {
-                            let mutable_clone = &mut last_line.clone();
-                            mutable_clone.set_string(last_line.get_string() + &String::from("\n"));
-                            self.current.change_line(last_number, mutable_clone.get_string());
-                            self.current.add_line(Line::new(last_number+1, String::default()));
-    
+                            last_line_string = last_line.get_string();
                         }
+                        self.get_mut_current().change_line(last_line_number, last_line_string + "\n");
+                        self.get_mut_current().add_line(Line::new(last_line_number + 1, String::default()));
                     },
                     KeyCode::Up => {
                         let mut current_line = self.current.get_x();
@@ -160,7 +157,11 @@ impl Component for CodeComponent {
                             self.current.set_x(current_line);
                             if let Some(line) = self.current.get_content().get(current_line) {
                                 if line.get_string().len() < self.get_current().get_y() {
-                                    self.current.set_y(line.get_string().len() - 1);
+                                    if line.get_string().len() == 0 {
+                                        self.current.set_y(0);                                        
+                                    } else {
+                                        self.current.set_y(line.get_string().len() - 1);
+                                    }
                                 }
                             }
                             self.current.set_cursor();
