@@ -126,6 +126,11 @@ impl Code {
         self.content.iter().find(|line| line.number == number)
     }
 
+    pub fn set_line_number(&mut self, number: usize) {
+        let line = self.content.remove(number);
+        self.content.insert(number + 1, line.clone())
+    }
+
     pub fn get_content(&self) -> &Vec<Line> {
         &self.content
     }
@@ -145,9 +150,11 @@ impl Code {
         if self.cursor_displayed {
             if let Some(line) = self.content.get(self.get_x()) {
                 let mut line_without_cursor = line.get_string().clone();
-                line_without_cursor.remove(self.get_y());
-                self.change_line_at_cursor(line_without_cursor);
-                self.cursor_displayed = false;
+                if line_without_cursor.len() > 0 {
+                    line_without_cursor.remove(self.get_y());
+                    self.change_line_at_cursor(line_without_cursor);
+                    self.cursor_displayed = false;
+                }
             }
         }
     }

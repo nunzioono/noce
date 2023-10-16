@@ -126,14 +126,35 @@ impl Component for CodeComponent {
                         self.current.change_line(last_line.get_number(), last_line.get_string()[..last_line.get_string().len()-1].to_string());
                     },
                     KeyCode::Enter => {
-                        let last_line_number = self.get_current().get_content().len().clone() - 1;
-                        let last_line = self.get_current().get_content().get(last_line_number);
-                        let mut last_line_string = String::default();
-                        if let Some(last_line) = last_line {
-                            last_line_string = last_line.get_string();
+                        {
+                            let mut_code = self.get_mut_current();
+                            mut_code.remove_cursor();    
                         }
-                        self.get_mut_current().change_line(last_line_number, last_line_string + "\n");
-                        self.get_mut_current().add_line(Line::new(last_line_number + 1, String::default()));
+                        let code = self.get_current().clone();
+                        let mut_code = self.get_mut_current();
+                        if let Some(current_line) = code.get_content().get(code.get_x()) {
+                            let line_number = current_line.get_number().clone();
+                            let new_current_string = current_line.get_string()[..code.get_y()].to_string().clone();
+                            let new_generated_string = current_line.get_string()[code.get_y()..].to_string().clone();
+                            mut_code.flush();
+                            for number in 0 .. line_number {
+                                if let Some(line) = code.get_line(number) {
+                                    mut_code.add_line(line.clone());                                    
+                                }
+                            }
+                            mut_code.add_line(Line::new(current_line.get_number(), new_current_string));
+                            mut_code.set_x(code.get_x());
+                            mut_code.set_y(code.get_y());
+                            mut_code.add_line(Line::new(current_line.get_number() + 1, new_generated_string));
+                            for number in current_line.get_number() + 1.. code.get_content().len() {
+                                if let Some(line) = code.get_line(number) {
+                                    let mut new_line = line.clone();
+                                    new_line.set_number(number + 1);
+                                    mut_code.add_line(new_line.clone());                                    
+                                }
+                            }
+                            mut_code.set_cursor();
+                        }
                     },
                     KeyCode::Up => {
                         let mut current_line = self.current.get_x();
