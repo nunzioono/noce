@@ -45,7 +45,7 @@ pub fn start(mut app: App, mut context: AppContext) -> Result<(), Box<dyn Error>
                 let current_code = app.get_mut_code(); 
                 //blink the cursor on frame update
                 if context.active_file().is_some() {
-                    if nframe%2 == 0 {
+                    if nframe%30 == 0 {
                         current_code.get_mut_current().remove_cursor();
                     } else {
                         current_code.get_mut_current().set_cursor();
