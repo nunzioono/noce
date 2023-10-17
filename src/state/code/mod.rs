@@ -281,16 +281,34 @@ impl Component for CodeComponent {
                         self.current.change_line(last_line.get_number(), last_line.get_string()[..last_line.get_string().len()-1].to_string());
                     },
                     KeyCode::Enter => {
-                        let last_number = self.current.get_content().into_iter().map(|x| x.get_number()).fold(0, |line1, line2| {
-                            if line1 > line2 { line1 } else { line2 }
-                        });
-                        let last_line = self.current.get_line(last_number);
-                        if let Some(last_line) = last_line {
-                            let mutable_clone = &mut last_line.clone();
-                            mutable_clone.set_string(last_line.get_string() + &String::from("\n"));
-                            self.current.change_line(last_number, mutable_clone.get_string());
-                            self.current.add_line(Line::new(last_number+1, String::default()));
-    
+                        {
+                            let mut_code = self.get_mut_current();
+                            mut_code.remove_cursor();    
+                        }
+                        let code = self.get_current().clone();
+                        let mut_code = self.get_mut_current();
+                        if let Some(current_line) = code.get_content().get(code.get_x()) {
+                            let line_number = current_line.get_number().clone();
+                            let new_current_string = current_line.get_string()[..code.get_y()].to_string().clone();
+                            let new_generated_string = current_line.get_string()[code.get_y()..].to_string().clone();
+                            mut_code.flush();
+                            for number in 0 .. line_number {
+                                if let Some(line) = code.get_line(number) {
+                                    mut_code.add_line(line.clone());                                    
+                                }
+                            }
+                            mut_code.add_line(Line::new(current_line.get_number(), new_current_string));
+                            mut_code.set_x(code.get_x());
+                            mut_code.set_y(code.get_y());
+                            mut_code.add_line(Line::new(current_line.get_number() + 1, new_generated_string));
+                            for number in current_line.get_number() + 1.. code.get_content().len() {
+                                if let Some(line) = code.get_line(number) {
+                                    let mut new_line = line.clone();
+                                    new_line.set_number(number + 1);
+                                    mut_code.add_line(new_line.clone());                                    
+                                }
+                            }
+                            mut_code.set_cursor();
                         }
                     },
                     KeyCode::Up => {
