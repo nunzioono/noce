@@ -96,24 +96,12 @@ impl Component for CodeComponent {
                             let code = self.history.get_current_code();
                             self.current = code.clone();
                         } else {
-                            if char == '\n' {
-                                let last_number = self.current.get_content().into_iter().map(|x| x.get_number()).fold(0, |line1, line2| {
-                                    if line1 > line2 { line1 } else { line2 }
-                                });
-                                if let Some(last_line) = self.current.get_line(last_number) {
-                                    let mutable_clone = &mut last_line.clone();
-                                    mutable_clone.set_string(last_line.get_string() + &String::from("\n"));
-                                    self.current.change_line(last_number, mutable_clone.get_string());
-                                    self.current.add_line(Line::new(last_number+1, String::default()));    
-                                }
-                            } else {
-                                self.current.remove_cursor();
-                                if let Some(current_line) = self.current.get_line(self.get_current().get_x()) {
-                                    self.current.change_line_at_cursor(current_line.get_string()[..self.get_current().get_y()].to_string() + &char.to_string() + &current_line.get_string()[self.current.get_y()..].to_string());    
-                                }
-                                self.current.set_y(self.current.get_y()+1);
-                                self.current.set_cursor();
+                            self.current.remove_cursor();
+                            if let Some(current_line) = self.current.get_line(self.get_current().get_x()) {
+                                self.current.change_line_at_cursor(current_line.get_string()[..self.get_current().get_y()].to_string() + &char.to_string() + &current_line.get_string()[self.current.get_y()..].to_string());    
                             }
+                            self.current.set_y(self.current.get_y()+1);
+                            self.current.set_cursor();
                         }
                     },
                     KeyCode::Delete => {
