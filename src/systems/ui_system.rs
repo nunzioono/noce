@@ -1,8 +1,8 @@
 use std::{error::Error, path::MAIN_SEPARATOR};
 
-use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Stylize}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, List, ListState, Clear}};
+use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Stylize, Styled}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, List, ListState, Clear}, text::{Line, Span}};
 
-use crate::state::{App, AppContext, ComponentType};
+use crate::state::{App, AppContext, ComponentType, code::code_selection::Point};
 
 use super::System;
 
@@ -100,6 +100,7 @@ impl UiSystem {
     }
 
     fn render_code<B: Backend>(&self, app: &App, context: &AppContext, frame: &mut Frame<B>, code_area: Rect) {
+        //Prepare data to conditionally render different variants of the same ui
         let context_focus: Option<ComponentType> = context.focus().clone();
         let context_hover: ComponentType = context.hover().clone();
         let area = self.layout_center(90, 94, code_area);
@@ -121,15 +122,55 @@ impl UiSystem {
             block = block.border_style(style);
         }
 
+        let selection_style = Style::new().white().on_blue().bold().italic();
+
         let code = app
         .get_code()
         .get_current()
         .get_content();
 
+        //Retrieve if something is selected the starting and ending point of the selection
+        let selection = app.get_code().get_selection();
+        let mut first = String::default();
+        let mut last = String::default();
+        let mut start_point: Point = Point::new(0,0);
+        let mut end_point: Point = Point::new(0,0);
+        if let Some(selection) = selection {
+            start_point = selection.get_start().clone();
+            end_point = selection.get_end().clone();
+            if let Some(some_line) = code.get(start_point.get_x()) {
+                first = some_line.clone().get_string()[start_point.get_y()..].to_string();
+            }
+            if let Some(some_line) = code.get(end_point.get_x()) {
+                last = some_line.clone().get_string()[..end_point.get_y()].to_string();
+            }
+        }
+
+        //Get the text style according to his status (selected or not)
         let lines: Vec<ListItem> = code
         .into_iter()
-        .map(|line| {
-            ListItem::new(line.get_string())
+        .map(move |line| {
+            let mut vec: Vec<Span<'_>> = vec![];
+            if line.get_number() == 0 && start_point!=end_point{
+                let string = line.get_string()[..start_point.get_y()].to_string();
+                string.set_style(style);
+                vec.push(string.into());
+                vec.push(Span::styled(first.clone(),selection_style));
+            } else if line.get_number() == end_point.get_x() {
+                let string = line.get_string()[end_point.get_y()..].to_string();
+                string.set_style(style);
+                vec.push(Span::styled(last.clone(),selection_style));
+                vec.push(string.into());
+            } else if line.get_number() > start_point.get_x() && line.get_number() < end_point.get_x() {
+                vec.push(Span::styled(line.get_string(),selection_style));
+            } else {
+                let string = line.get_string();
+                string.set_style(style);
+                vec.push(string.into());
+            }
+            let ratatui_line = Line::from(vec);
+            let item = ListItem::new(ratatui_line);
+            item
         })
         .collect();
 
@@ -140,27 +181,17 @@ impl UiSystem {
         })
         .collect();
 
-        let offset = app.get_code().get_current().get_x();
-        let mut list_state = ListState::default();
-        if context_focus == Some(ComponentType::Code) {
-            list_state = list_state
-            .with_offset(0)
-            .with_selected(Some(offset.clone()));
-        }
 
-        let list_lines: List = List::new(lines)
-        .highlight_style(
-            Style::default().white().on_blue().bold()
-        );
+        let list_lines = List::new(lines);
 
-        let list_numbers: List = List::new(numbers)
-        .highlight_style(
-            Style::default().white().on_blue().bold()
-        );
+        let list_numbers = List::new(numbers);
 
         frame.render_widget(block, code_area);
-        frame.render_stateful_widget(list_numbers, layout_code.get(0).unwrap().clone(), &mut list_state);
-        frame.render_stateful_widget(list_lines, layout_code.get(1).unwrap().clone(), &mut list_state);
+        frame.render_widget(list_numbers, layout_code.get(0).unwrap().clone());
+        frame.render_widget(list_lines, layout_code.get(1).unwrap().clone());
+
+
+
 
     }
 

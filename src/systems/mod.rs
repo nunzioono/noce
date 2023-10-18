@@ -26,7 +26,7 @@ pub trait System {
 
 pub fn start(mut app: App, mut context: AppContext) -> Result<(), Box<dyn Error>>{
     // setup terminal
-    let debugging_events = false;
+    let debugging_events = true;
 
     enable_raw_mode()?;
     let mut stdout = stdout();

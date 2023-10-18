@@ -87,34 +87,36 @@ impl Code {
         self
     } 
     
-    pub fn remove_line(&mut self, number: usize) -> &mut Code {
+    pub fn remove_line(&mut self, number: usize) {
         self.content.retain(|line| line.number != number);
-        self
     }
 
-    pub fn remove_line_at_cursor(&mut self) -> &mut Code {
+    pub fn remove_line_at_cursor(&mut self) {
         self.content.retain(|line| line.number != self.x);
-        self
     }
 
-    pub fn change_line(&mut self, number: usize, new_value: String) -> &mut Code {
+    pub fn replace_line(&mut self, number: usize, from: &String, to: &String) {
+        if let Some(line) = self.content.get_mut(number) {
+            line.set_string(line.get_string().replace(from, to));
+        }
+    }
+
+    pub fn change_line(&mut self, number: usize, new_value: String) {
         for line in &mut self.content {
             if line.number == number {
                 line.line = new_value;
                 break;
             }
         }
-        self
     }
 
-    pub fn change_line_at_cursor(&mut self, new_value: String) -> &mut Code {
+    pub fn change_line_at_cursor(&mut self, new_value: String) {
         for line in &mut self.content {
             if line.number == self.x {
                 line.line = new_value;
                 break;
             }
         }
-        self
     }
 
     pub fn add_line(&mut self, line: Line) -> &mut Code {
