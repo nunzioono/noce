@@ -56,5 +56,6 @@ impl CodeSelection {
     pub fn set_end(&mut self, end: Point) {
         self.end = end;
     }
+
 }
 

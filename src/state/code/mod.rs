@@ -188,8 +188,25 @@ impl Component for CodeComponent {
                     KeyCode::Up => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
                             if self.current.get_x() != 0 {
+                                let mut new_string: String = String::default();
+                                let mut is_shorter_line = false;
+                                let mut old_end: Point = Point::default();
+                                if let Some(selection) = &self.selection {
+                                    old_end = selection.get_end().clone();
+                                }
+                                if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
+                                    if let Some(new_line) = self.get_current().get_line(old_end.get_x() - 1) {
+                                        if old_line.get_string().len() > new_line.get_string().len() {
+                                            is_shorter_line = true;
+                                            new_string = new_line.get_string();
+                                        }
+                                    }
+                                }
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
+                                    if is_shorter_line && !new_string.is_empty() {
+                                        old_end.set_y(new_string.len()-1);
+                                    }
                                     old_end.set_x(old_end.get_x() - 1);
                                     selection.set_end(old_end);
                                 } else {
@@ -207,6 +224,8 @@ impl Component for CodeComponent {
                                     ));
                                 }
                             }
+                        } else {
+                            self.selection = None;
                         }
                         let mut current_line = self.current.get_x();
                         if current_line > 0 {
@@ -224,8 +243,25 @@ impl Component for CodeComponent {
                     KeyCode::Down => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
                             if self.get_current().get_x() != self.get_current().get_content().len() - 1 {
+                                let mut new_string: String = String::default();
+                                let mut is_shorter_line = false;
+                                let mut old_end: Point = Point::default();
+                                if let Some(selection) = &self.selection {
+                                    old_end = selection.get_end().clone();
+                                }
+                                if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
+                                    if let Some(new_line) = self.get_current().get_line(old_end.get_x() + 1) {
+                                        if old_line.get_string().len() > new_line.get_string().len() {
+                                            is_shorter_line = true;
+                                            new_string = new_line.get_string();
+                                        }
+                                    }
+                                }
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
+                                    if is_shorter_line && !new_string.is_empty() {
+                                        old_end.set_y(new_string.len()-1);
+                                    }
                                     old_end.set_x(old_end.get_x() + 1);
                                     selection.set_end(old_end);
                                 } else {
@@ -242,8 +278,9 @@ impl Component for CodeComponent {
                                         end,
                                     ));
                                 }
-                                println!("{:#?}",self.selection);    
                             }
+                        } else {
+                            self.selection = None;
                         }
                         let mut current_line = self.current.get_x();
                         if current_line < self.current.get_content().len() - 1 {
@@ -268,7 +305,9 @@ impl Component for CodeComponent {
                             if self.get_current().get_y() != 0 {
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
-                                    old_end.set_y(old_end.get_y() - 1);
+                                    if old_end.get_y() != 0 {
+                                        old_end.set_y(old_end.get_y() - 1);
+                                    }
                                     selection.set_end(old_end);
                                 } else {
                                     let start = Point::new(
@@ -285,6 +324,8 @@ impl Component for CodeComponent {
                                     ));
                                 }    
                             }
+                        } else {
+                            self.selection = None;
                         }
                         let mut current_char = self.current.get_y();
                         if current_char > 0 {
@@ -296,30 +337,37 @@ impl Component for CodeComponent {
                     },
                     KeyCode::Right => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
+                            let mut is_end_y = false;
                             let cursor_position = (self.get_current().get_x(), self.get_current().get_y());
                             if let Some(line) = self.get_current().get_line(cursor_position.0) {
-                                if  cursor_position.1 != line.get_string().len() - 1 {
-                                    if let Some(selection) = &mut self.selection {
-                                        let mut old_end = selection.get_end().clone();
-                                        old_end.set_y(old_end.get_y() + 1);
-                                        selection.set_end(old_end);
-                                    } else {
-                                        let start = Point::new(
-                                            self.get_current().get_x(),
-                                            self.get_current().get_y(),
-                                        );
-                                        let end = Point::new(
-                                            self.get_current().get_x(),
-                                            self.get_current().get_y() + 1,
-                                        );
-                                        self.selection = Some(CodeSelection::new(
-                                            start,
-                                            end,
-                                        ));
-                                    }
-        
+                                if let Some(selection) = self.get_selection() {
+                                    if cursor_position.1 == line.get_string().len() - 1 || selection.get_end().get_y() == line.get_string().len() - 1 {
+                                        is_end_y = true;
+                                    }    
                                 }
                             }
+                            if let Some(selection) = &mut self.selection {
+                                let mut old_end = selection.get_end().clone();
+                                if !is_end_y {
+                                    old_end.set_y(old_end.get_y() + 1);
+                                }
+                                selection.set_end(old_end);
+                            } else {
+                                let start = Point::new(
+                                    self.get_current().get_x(),
+                                    self.get_current().get_y(),
+                                );
+                                let end = Point::new(
+                                    self.get_current().get_x(),
+                                    self.get_current().get_y() + 1,
+                                );
+                                self.selection = Some(CodeSelection::new(
+                                    start,
+                                    end,
+                                ));
+                            }
+                        } else {
+                            self.selection = None;
                         }
                         let actual_code = self.get_current();
                         let mut current_char = self.current.get_y();
@@ -389,8 +437,25 @@ impl Component for CodeComponent {
                     KeyCode::Up => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
                             if self.current.get_x() != 0 {
+                                let mut new_string: String = String::default();
+                                let mut is_shorter_line = false;
+                                let mut old_end: Point = Point::default();
+                                if let Some(selection) = &self.selection {
+                                    old_end = selection.get_end().clone();
+                                }
+                                if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
+                                    if let Some(new_line) = self.get_current().get_line(old_end.get_x() - 1) {
+                                        if old_line.get_string().len() > new_line.get_string().len() {
+                                            is_shorter_line = true;
+                                            new_string = new_line.get_string();
+                                        }
+                                    }
+                                }
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
+                                    if is_shorter_line && !new_string.is_empty() {
+                                        old_end.set_y(new_string.len()-1);
+                                    }
                                     old_end.set_x(old_end.get_x() - 1);
                                     selection.set_end(old_end);
                                 } else {
@@ -408,6 +473,8 @@ impl Component for CodeComponent {
                                     ));
                                 }
                             }
+                        } else {
+                            self.selection = None;
                         }
                         let mut current_line = self.current.get_x();
                         if current_line > 0 {
@@ -425,8 +492,25 @@ impl Component for CodeComponent {
                     KeyCode::Down => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
                             if self.get_current().get_x() != self.get_current().get_content().len() - 1 {
+                                let mut new_string: String = String::default();
+                                let mut is_shorter_line = false;
+                                let mut old_end: Point = Point::default();
+                                if let Some(selection) = &self.selection {
+                                    old_end = selection.get_end().clone();
+                                }
+                                if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
+                                    if let Some(new_line) = self.get_current().get_line(old_end.get_x() + 1) {
+                                        if old_line.get_string().len() > new_line.get_string().len() {
+                                            is_shorter_line = true;
+                                            new_string = new_line.get_string();
+                                        }
+                                    }
+                                }
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
+                                    if is_shorter_line && !new_string.is_empty() {
+                                        old_end.set_y(new_string.len()-1);
+                                    }
                                     old_end.set_x(old_end.get_x() + 1);
                                     selection.set_end(old_end);
                                 } else {
@@ -443,8 +527,9 @@ impl Component for CodeComponent {
                                         end,
                                     ));
                                 }
-                                println!("{:#?}",self.selection);    
                             }
+                        } else {
+                            self.selection = None;
                         }
                         let mut current_line = self.current.get_x();
                         if current_line < self.current.get_content().len() - 1 {
@@ -466,10 +551,12 @@ impl Component for CodeComponent {
                     },
                     KeyCode::Left => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
-                            if self.get_current().get_y() != 0 {
+                            if self.get_current().clone().get_y() != 0 {
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
-                                    old_end.set_y(old_end.get_y() - 1);
+                                    if old_end.get_y() != 0 {
+                                        old_end.set_y(old_end.get_y() - 1);
+                                    }
                                     selection.set_end(old_end);
                                 } else {
                                     let start = Point::new(
@@ -486,6 +573,8 @@ impl Component for CodeComponent {
                                     ));
                                 }    
                             }
+                        } else {
+                            self.selection = None;
                         }
                         let mut current_char = self.current.get_y();
                         if current_char > 0 {
@@ -497,30 +586,41 @@ impl Component for CodeComponent {
                     },
                     KeyCode::Right => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
+                            let mut is_end_y = false;
                             let cursor_position = (self.get_current().get_x(), self.get_current().get_y());
                             if let Some(line) = self.get_current().get_line(cursor_position.0) {
-                                if  cursor_position.1 != line.get_string().len() - 1 {
-                                    if let Some(selection) = &mut self.selection {
-                                        let mut old_end = selection.get_end().clone();
-                                        old_end.set_y(old_end.get_y() + 1);
-                                        selection.set_end(old_end);
-                                    } else {
-                                        let start = Point::new(
-                                            self.get_current().get_x(),
-                                            self.get_current().get_y(),
-                                        );
-                                        let end = Point::new(
-                                            self.get_current().get_x(),
-                                            self.get_current().get_y() + 1,
-                                        );
-                                        self.selection = Some(CodeSelection::new(
-                                            start,
-                                            end,
-                                        ));
+                                if  cursor_position.1 == line.get_string().len() - 1 {
+                                    if let Some(line) = self.get_current().get_line(cursor_position.0) {
+                                        if let Some(selection) = self.get_selection() {
+                                            if cursor_position.1 == line.get_string().len() - 1 || selection.get_end().get_y() == line.get_string().len() - 1 {
+                                                is_end_y = true;
+                                            }    
+                                        }
                                     }
-        
                                 }
                             }
+                            if let Some(selection) = &mut self.selection {
+                                let mut old_end = selection.get_end().clone();
+                                if !is_end_y {
+                                    old_end.set_y(old_end.get_y() + 1);
+                                }
+                                selection.set_end(old_end);
+                            } else {
+                                let start = Point::new(
+                                    self.get_current().get_x(),
+                                    self.get_current().get_y(),
+                                );
+                                let end = Point::new(
+                                    self.get_current().get_x(),
+                                    self.get_current().get_y() + 1,
+                                );
+                                self.selection = Some(CodeSelection::new(
+                                    start,
+                                    end,
+                                ));
+                            }
+                        } else {
+                            self.selection = None;
                         }
                         let actual_code = self.get_current();
                         let mut current_char = self.current.get_y();

@@ -131,19 +131,11 @@ impl UiSystem {
 
         //Retrieve if something is selected the starting and ending point of the selection
         let selection = app.get_code().get_selection();
-        let mut first = String::default();
-        let mut last = String::default();
         let mut start_point: Point = Point::new(0,0);
         let mut end_point: Point = Point::new(0,0);
         if let Some(selection) = selection {
             start_point = selection.get_start().clone();
             end_point = selection.get_end().clone();
-            if let Some(some_line) = code.get(start_point.get_x()) {
-                first = some_line.clone().get_string()[start_point.get_y()..].to_string();
-            }
-            if let Some(some_line) = code.get(end_point.get_x()) {
-                last = some_line.clone().get_string()[..end_point.get_y()].to_string();
-            }
         }
 
         //Get the text style according to his status (selected or not)
@@ -151,23 +143,50 @@ impl UiSystem {
         .into_iter()
         .map(move |line| {
             let mut vec: Vec<Span<'_>> = vec![];
-            if line.get_number() == 0 && start_point!=end_point{
+            // the row belongs to the start of the selection it needs to be splitted in non-selected text and selected text
+            if line.get_number() == start_point.get_x() {
                 let string = line.get_string()[..start_point.get_y()].to_string();
                 string.set_style(style);
-                vec.push(string.into());
-                vec.push(Span::styled(first.clone(),selection_style));
-            } else if line.get_number() == end_point.get_x() {
+                if !string.is_empty() {
+                    vec.push(string.into());
+                }
+
+                //if the selection is on multiple lines the selection on the first line should be calculated here
+                if start_point.get_x() != end_point.get_x() {
+                    let first = line.get_string()[start_point.get_y()..].to_string();
+                    vec.push(Span::styled(first.clone(),selection_style));
+                }
+            }
+            //if the row belongs to the last line of the selection needs to be splitted in selected text and non-selected text
+            //note that selection can start in a line and end on the same line so it needs to not push the selection 2 times
+            if line.get_number() == end_point.get_x() {
                 let string = line.get_string()[end_point.get_y()..].to_string();
                 string.set_style(style);
-                vec.push(Span::styled(last.clone(),selection_style));
-                vec.push(string.into());
-            } else if line.get_number() > start_point.get_x() && line.get_number() < end_point.get_x() {
+                let last: String;
+                if start_point.get_x() == end_point.get_x() {
+                    last = line.get_string()[start_point.get_y()..end_point.get_y()].to_string();
+                } else {
+                    last = line.get_string()[..end_point.get_y()].to_string();
+                }
+
+                if !last.is_empty() {
+                    vec.push(Span::styled(last.clone(),selection_style));
+                }
+
+                if !string.is_empty() {
+                    vec.push(string.into());
+                }
+            }
+            
+            //the if the line is selected as whole must be pushed as styled and if not as non styled
+            if line.get_number() > start_point.get_x() && line.get_number() < end_point.get_x() {
                 vec.push(Span::styled(line.get_string(),selection_style));
-            } else {
+            } else if line.get_number() < start_point.get_x() || line.get_number() > end_point.get_x() {
                 let string = line.get_string();
                 string.set_style(style);
                 vec.push(string.into());
             }
+
             let ratatui_line = Line::from(vec);
             let item = ListItem::new(ratatui_line);
             item
