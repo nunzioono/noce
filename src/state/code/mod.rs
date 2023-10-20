@@ -186,26 +186,29 @@ impl Component for CodeComponent {
                         }
                     },
                     KeyCode::Up => {
+                        let mut new_line = Line::default();
+                        let mut is_shorter_line = false;
+                        let mut old_end: Point = Point::default();
+
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
+
                             if self.current.get_x() != 0 {
-                                let mut new_string: String = String::default();
-                                let mut is_shorter_line = false;
-                                let mut old_end: Point = Point::default();
+                                
                                 if let Some(selection) = &self.selection {
                                     old_end = selection.get_end().clone();
                                 }
                                 if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
-                                    if let Some(new_line) = self.get_current().get_line(old_end.get_x() - 1) {
-                                        if old_line.get_string().len() > new_line.get_string().len() {
+                                    if let Some(next_line) = self.get_current().get_line(old_end.get_x() - 1) {
+                                        if self.get_current().get_y() > next_line.get_string().len() && old_line.get_string().len() > next_line.get_string().len() {
                                             is_shorter_line = true;
-                                            new_string = new_line.get_string();
+                                            new_line = next_line.clone();
                                         }
                                     }
                                 }
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
-                                    if is_shorter_line && !new_string.is_empty() {
-                                        old_end.set_y(new_string.len()-1);
+                                    if is_shorter_line {
+                                        old_end.set_y(new_line.get_string().len()-1);
                                     }
                                     old_end.set_x(old_end.get_x() - 1);
                                     selection.set_end(old_end);
@@ -227,13 +230,14 @@ impl Component for CodeComponent {
                         } else {
                             self.selection = None;
                         }
+
                         let mut current_line = self.current.get_x();
                         if current_line > 0 {
                             self.current.remove_cursor();
                             current_line -= 1;
                             self.current.set_x(current_line);
                             if let Some(line) = self.current.get_content().get(current_line) {
-                                if line.get_string().len() < self.get_current().get_y() {
+                                if is_shorter_line {
                                     self.current.set_y(line.get_string().len() - 1);
                                 }
                             }
@@ -441,26 +445,29 @@ impl Component for CodeComponent {
                         }
                     },
                     KeyCode::Up => {
+                        let mut new_line = Line::default();
+                        let mut is_shorter_line = false;
+                        let mut old_end: Point = Point::default();
+
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
+
                             if self.current.get_x() != 0 {
-                                let mut new_string: String = String::default();
-                                let mut is_shorter_line = false;
-                                let mut old_end: Point = Point::default();
+                                
                                 if let Some(selection) = &self.selection {
                                     old_end = selection.get_end().clone();
                                 }
                                 if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
-                                    if let Some(new_line) = self.get_current().get_line(old_end.get_x() - 1) {
-                                        if old_line.get_string().len() > new_line.get_string().len() {
+                                    if let Some(next_line) = self.get_current().get_line(old_end.get_x() - 1) {
+                                        if self.get_current().get_y() > next_line.get_string().len() && old_line.get_string().len() > next_line.get_string().len() {
                                             is_shorter_line = true;
-                                            new_string = new_line.get_string();
+                                            new_line = next_line.clone();
                                         }
                                     }
                                 }
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
-                                    if is_shorter_line && !new_string.is_empty() {
-                                        old_end.set_y(new_string.len()-1);
+                                    if is_shorter_line {
+                                        old_end.set_y(new_line.get_string().len()-1);
                                     }
                                     old_end.set_x(old_end.get_x() - 1);
                                     selection.set_end(old_end);
@@ -482,13 +489,14 @@ impl Component for CodeComponent {
                         } else {
                             self.selection = None;
                         }
+
                         let mut current_line = self.current.get_x();
                         if current_line > 0 {
                             self.current.remove_cursor();
                             current_line -= 1;
                             self.current.set_x(current_line);
                             if let Some(line) = self.current.get_content().get(current_line) {
-                                if line.get_string().len() < self.get_current().get_y() {
+                                if is_shorter_line {
                                     self.current.set_y(line.get_string().len() - 1);
                                 }
                             }
@@ -498,24 +506,25 @@ impl Component for CodeComponent {
                     KeyCode::Down => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
                             if self.get_current().get_x() != self.get_current().get_content().len() - 1 {
-                                let mut new_string: String = String::default();
                                 let mut is_shorter_line = false;
                                 let mut old_end: Point = Point::default();
+                                let mut next_line = Line::default();
+
                                 if let Some(selection) = &self.selection {
                                     old_end = selection.get_end().clone();
                                 }
                                 if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
                                     if let Some(new_line) = self.get_current().get_line(old_end.get_x() + 1) {
-                                        if old_line.get_string().len() > new_line.get_string().len() {
+                                        if self.get_current().get_y() > new_line.get_string().len() && old_line.get_string().len() > new_line.get_string().len() {
                                             is_shorter_line = true;
-                                            new_string = new_line.get_string();
+                                            next_line = new_line.clone();
                                         }
                                     }
                                 }
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
-                                    if is_shorter_line && !new_string.is_empty() {
-                                        old_end.set_y(new_string.len()-1);
+                                    if is_shorter_line {
+                                        old_end.set_y(next_line.get_string().len()-1);
                                     }
                                     old_end.set_x(old_end.get_x() + 1);
                                     selection.set_end(old_end);
@@ -537,23 +546,28 @@ impl Component for CodeComponent {
                         } else {
                             self.selection = None;
                         }
-                        let mut current_line = self.current.get_x();
-                        if current_line < self.current.get_content().len() - 1 {
-                            self.current.remove_cursor();
-                            current_line += 1;
-                            self.current.set_x(current_line);
-                            if let Some(line) = self.current.get_content().get(current_line) {
-                                if line.get_string().len() < self.get_current().get_y() {
-                                    if line.get_string().len() == 0 {
-                                        self.current.set_y(0);                                        
-                                    } else {
-                                        self.current.set_y(line.get_string().len() - 1);
-                                    }
+                        //once selection is processed the cursor gets moved
+                        //if is moving on a shorter line gets to its end
+                        //if is moving on a equal or longer line gets setted on the same position it had on the previous line
+                        let mut is_shorter = false;
+                        let mut current_line = Line::default();
+                        let mut next_line = Line::default();
+                        if let Some(actual_line) = self.get_current().get_line(self.get_current().get_x()) {
+                            if let Some(lower_line) = self.get_current().get_line(self.get_current().get_x() + 1) {
+                                current_line = actual_line.clone();
+                                next_line = lower_line.clone();
+                                if self.get_current().get_y() > next_line.get_string().len() && current_line.get_string().len() > next_line.get_string().len() {
+                                    is_shorter = true;
                                 }
                             }
-                            self.current.set_cursor();
-
                         }
+                        self.get_mut_current().remove_cursor();
+                        self.get_mut_current().set_x(current_line.get_number() + 1);
+                        if is_shorter {
+                            self.current.set_y(next_line.get_string().len() - 1);
+                        }
+                        self.current.set_cursor();
+
                     },
                     KeyCode::Left => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
