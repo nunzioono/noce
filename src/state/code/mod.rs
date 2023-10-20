@@ -322,11 +322,11 @@ impl Component for CodeComponent {
                                 } else {
                                     let start = Point::new(
                                         self.get_current().get_x(),
-                                        self.get_current().get_y() - 1,
+                                        self.get_current().get_y(),
                                     );
                                     let end = Point::new(
                                         self.get_current().get_x(),
-                                        self.get_current().get_y(),
+                                        self.get_current().get_y() - 1,
                                     );
                                     self.selection = Some(CodeSelection::new(
                                         start,
@@ -342,7 +342,7 @@ impl Component for CodeComponent {
                             self.current.remove_cursor();
                             current_char -= 1;
                             self.current.set_y(current_char);
-                            self.current.set_cursor();
+                            self.current.set_cursor();    
                         }    
                     },
                     KeyCode::Right => {

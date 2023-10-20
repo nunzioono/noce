@@ -145,7 +145,12 @@ impl UiSystem {
             let mut vec: Vec<Span<'_>> = vec![];
             // the row belongs to the start of the selection it needs to be splitted in non-selected text and selected text
             if line.get_number() == start_point.get_x() {
-                let string = line.get_string()[..start_point.get_y()].to_string();
+                let string;
+                if start_point.get_y() > end_point.get_y() {
+                    string = line.get_string()[..end_point.get_y()].to_string();                
+                } else {
+                    string = line.get_string()[..start_point.get_y()].to_string();
+                }
                 string.set_style(style);
                 if !string.is_empty() {
                     vec.push(string.into());
@@ -160,11 +165,22 @@ impl UiSystem {
             //if the row belongs to the last line of the selection needs to be splitted in selected text and non-selected text
             //note that selection can start in a line and end on the same line so it needs to not push the selection 2 times
             if line.get_number() == end_point.get_x() {
-                let string = line.get_string()[end_point.get_y()..].to_string();
+                let string;
+                if start_point.get_y() > end_point.get_y() {
+                    string = line.get_string()[start_point.get_y()..].to_string();                
+                } else {
+                    string = line.get_string()[end_point.get_y()..].to_string();
+                }
                 string.set_style(style);
                 let last: String;
                 if start_point.get_x() == end_point.get_x() {
-                    last = line.get_string()[start_point.get_y()..end_point.get_y()].to_string();
+                    if start_point.get_y() > end_point.get_y() {
+                        //since the slice of a string includes the start and excludes the end to exclude the cursor from the selection
+                        //right to left it's needed a +1 on the starting point
+                        last = line.get_string()[end_point.get_y()..start_point.get_y()+1].to_string();
+                    } else {
+                        last = line.get_string()[start_point.get_y()..end_point.get_y()].to_string();
+                    }
                 } else {
                     last = line.get_string()[..end_point.get_y()].to_string();
                 }
