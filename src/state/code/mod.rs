@@ -191,40 +191,53 @@ impl Component for CodeComponent {
                         let mut old_end: Point = Point::default();
 
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
-
                             if self.current.get_x() != 0 {
-                                
                                 if let Some(selection) = &self.selection {
                                     old_end = selection.get_end().clone();
                                 }
-                                if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
-                                    if let Some(next_line) = self.get_current().get_line(old_end.get_x() - 1) {
-                                        if self.get_current().get_y() > next_line.get_string().len() && old_line.get_string().len() > next_line.get_string().len() {
-                                            is_shorter_line = true;
-                                            new_line = next_line.clone();
+
+                                if let Some(old_line) = self.get_current().get_line(old_end.get_x()) {
+                                    if old_end.get_y() > old_line.get_string().len() {
+                                        old_end.set_y(old_line.get_string().len());
+                                    }
+                                    if old_end.get_x() != 0 {
+                                        if let Some(next_line) = self.get_current().get_line(old_end.get_x() - 1) {
+                                            if self.get_current().get_y() > next_line.get_string().len() && old_line.get_string().len() > next_line.get_string().len() {
+                                                is_shorter_line = true;
+                                                new_line = next_line.clone();
+                                            }
                                         }
+    
                                     }
                                 }
+
                                 if let Some(selection) = &mut self.selection {
                                     let mut old_end = selection.get_end().clone();
                                     if is_shorter_line {
-                                        old_end.set_y(new_line.get_string().len()-1);
+                                        old_end.set_y(new_line.get_string().len() - 1);
                                     }
                                     old_end.set_x(old_end.get_x() - 1);
+
+                                    // If the end is lower on the Y-axis, move it to the upper line
+                                    if old_end.get_y() < selection.get_start().get_y() {
+                                        let temp = old_end.get_y();
+                                        old_end.set_y(selection.get_start().get_y());
+                                        selection.set_start(Point::new(selection.get_start().get_x(), temp));
+                                    }
+
                                     selection.set_end(old_end);
                                 } else {
-                                    let start = Point::new(
-                                        self.get_current().get_x() - 1,
-                                        self.get_current().get_y(),
-                                    );
-                                    let end = Point::new(
-                                        self.get_current().get_x(),
-                                        self.get_current().get_y(),
-                                    );
-                                    self.selection = Some(CodeSelection::new(
-                                        start,
-                                        end,
-                                    ));
+                                    let mut start = Point::new(self.get_current().get_x() - 1, self.get_current().get_y());
+                                    let mut end = Point::new(self.get_current().get_x(), self.get_current().get_y());
+
+                                    // If the end is lower on the Y-axis, move it to the upper line
+                                    if end.get_y() < start.get_y() {
+                                        let temp = end.get_y();
+                                        end.set_y(start.get_y());
+                                        start.set_y(temp);
+                                    }
+
+                                    self.selection = Some(CodeSelection::new(start, end));
                                 }
                             }
                         } else {
@@ -232,17 +245,22 @@ impl Component for CodeComponent {
                         }
 
                         let mut current_line = self.current.get_x();
+
                         if current_line > 0 {
                             self.current.remove_cursor();
                             current_line -= 1;
                             self.current.set_x(current_line);
+
                             if let Some(line) = self.current.get_content().get(current_line) {
                                 if is_shorter_line {
                                     self.current.set_y(line.get_string().len() - 1);
                                 }
                             }
+
                             self.current.set_cursor();
                         }
+
+
                     },
                     KeyCode::Down => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {

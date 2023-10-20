@@ -143,72 +143,100 @@ impl UiSystem {
         .into_iter()
         .map(move |line| {
             let mut vec: Vec<Span<'_>> = vec![];
-            // the row belongs to the start of the selection it needs to be splitted in non-selected text and selected text
-            if line.get_number() == start_point.get_x() {
-                let string;
-                if start_point.get_y() > end_point.get_y() {
-                    string = line.get_string()[..end_point.get_y()].to_string();                
-                } else {
-                    string = line.get_string()[..start_point.get_y()].to_string();
-                }
-                string.set_style(style);
-                if !string.is_empty() {
-                    vec.push(string.into());
-                }
-
-                //if the selection is on multiple lines the selection on the first line should be calculated here
-                if start_point.get_x() != end_point.get_x() {
-                    let first = line.get_string()[start_point.get_y()..].to_string();
-                    vec.push(Span::styled(first.clone(),selection_style));
-                }
+            let line_number = line.get_number();
+            let focus: Option<&ComponentType>;
+            if let Some(tmp) = context.focus() {
+                focus = Some(tmp);
+            } else {
+                focus = None;
             }
-            //if the row belongs to the last line of the selection needs to be splitted in selected text and non-selected text
-            //note that selection can start in a line and end on the same line so it needs to not push the selection 2 times
-            if line.get_number() == end_point.get_x() {
-                let string;
-                if start_point.get_y() > end_point.get_y() {
-                    string = line.get_string()[start_point.get_y()..].to_string();                
-                } else {
-                    string = line.get_string()[end_point.get_y()..].to_string();
-                }
-                string.set_style(style);
-                let last: String;
-                if start_point.get_x() == end_point.get_x() {
-                    if start_point.get_y() > end_point.get_y() {
-                        //since the slice of a string includes the start and excludes the end to exclude the cursor from the selection
-                        //right to left it's needed a +1 on the starting point
-                        last = line.get_string()[end_point.get_y()..start_point.get_y()+1].to_string();
+
+            if focus != Some(&ComponentType::Code) || context.focus().is_none() {
+                //not focused code
+                vec.push(Span::from(line.get_string()));
+            } else if focus == Some(&ComponentType::Code) && start_point.get_x() < end_point.get_x() {
+                //selection multiple lines left to right
+                if line_number >= start_point.get_x() && line_number <= end_point.get_x() {
+                    //current line is inside the selection or first or last line of the selection
+                    if line_number == start_point.get_x() {
+                        //first line
+                        let not_styled = Span::from(line.get_string()[..start_point.get_y()].to_string());
+                        let styled = Span::from(line.get_string()[start_point.get_y()..].to_string());
+                        vec.push(not_styled.set_style(style));
+                        vec.push(styled.set_style(selection_style));
+                    } else if line_number == end_point.get_x() {
+                        //last line
+                        let styled = Span::from(line.get_string()[..end_point.get_y()].to_string());
+                        let not_styled = Span::from(line.get_string()[end_point.get_y()..].to_string());
+                        vec.push(styled.set_style(selection_style));
+                        vec.push(not_styled.set_style(style));
                     } else {
-                        last = line.get_string()[start_point.get_y()..end_point.get_y()].to_string();
+                        //line inside selection
+                        let styled = Span::from(line.get_string());
+                        vec.push(styled.set_style(selection_style));
                     }
                 } else {
-                    last = line.get_string()[..end_point.get_y()].to_string();
+                    let not_styled = Span::from(line.get_string());
+                    vec.push(not_styled.set_style(style));
                 }
-
-                if !last.is_empty() {
-                    vec.push(Span::styled(last.clone(),selection_style));
+            } else if focus == Some(&ComponentType::Code) && start_point.get_x() > end_point.get_x() {
+                //selection multiple lines right to left
+                if line_number <= start_point.get_x() && line_number >= end_point.get_x() {
+                    //current line is inside the selection or first or last line of the selection
+                    if line_number == end_point.get_x() {
+                        //first line
+                        let not_styled = Span::from(line.get_string()[..end_point.get_y()].to_string());
+                        let styled = Span::from(line.get_string()[end_point.get_y()..].to_string());
+                        vec.push(not_styled.set_style(style));
+                        vec.push(styled.set_style(selection_style));
+                    } else if line_number == start_point.get_x() {
+                        //last line
+                        let styled = Span::from(line.get_string()[..start_point.get_y()].to_string());
+                        let not_styled = Span::from(line.get_string()[start_point.get_y()..].to_string());
+                        vec.push(styled.set_style(selection_style));
+                        vec.push(not_styled.set_style(style));
+                    } else {
+                        //line inside selection
+                        let styled = Span::from(line.get_string());
+                        vec.push(styled.set_style(selection_style));
+                    }
+                } else {
+                    //lines out of the selection
+                    let not_styled = Span::from(line.get_string());
+                    vec.push(not_styled.set_style(style));
                 }
-
-                if !string.is_empty() {
-                    vec.push(string.into());
+            } else if focus == Some(&ComponentType::Code) && start_point.get_x() == end_point.get_x() && line_number == start_point.get_x() {
+                //selection on a single line
+                if start_point.get_y() > end_point.get_y() {
+                    //selection right to left
+                    let not_styled_first = Span::from(line.get_string()[..end_point.get_y()].to_string());
+                    let styled = Span::from(line.get_string()[end_point.get_y()..start_point.get_y()].to_string());
+                    let not_styled_last = Span::from(line.get_string()[start_point.get_y()..].to_string());
+                    vec.push(not_styled_first.set_style(style));
+                    vec.push(styled.set_style(selection_style));
+                    vec.push(not_styled_last.set_style(style));
+                } else if start_point.get_y() < end_point.get_y() {
+                    //selection left to right
+                    let not_styled_first = Span::from(line.get_string()[..start_point.get_y()].to_string());
+                    let styled = Span::from(line.get_string()[start_point.get_y()..end_point.get_y()].to_string());
+                    let not_styled_last = Span::from(line.get_string()[end_point.get_y()..].to_string());
+                    vec.push(not_styled_first.set_style(style));
+                    vec.push(styled.set_style(selection_style));
+                    vec.push(not_styled_last.set_style(style));
+                } else {
+                    //selection empty
+                    let not_styled = Span::from(line.get_string());
+                    vec.push(not_styled.set_style(style));
                 }
+            } else if focus == Some(&ComponentType::Code) {
+                //focused with selection empty
+                let not_styled = Span::from(line.get_string());
+                vec.push(not_styled.set_style(style));
             }
-            
-            //the if the line is selected as whole must be pushed as styled and if not as non styled
-            if line.get_number() > start_point.get_x() && line.get_number() < end_point.get_x() {
-                vec.push(Span::styled(line.get_string(),selection_style));
-            } else if line.get_number() < start_point.get_x() || line.get_number() > end_point.get_x() {
-                let string = line.get_string();
-                string.set_style(style);
-                vec.push(string.into());
-            }
 
-            let ratatui_line = Line::from(vec);
-            let item = ListItem::new(ratatui_line);
-            item
+            ListItem::new(Line::from(vec))
         })
         .collect();
-
         let numbers: Vec<ListItem>= code
         .into_iter()
         .map(|line| {
