@@ -23,12 +23,12 @@ impl Component for CodeComponent {
     }
 
     fn handle_event(&mut self, context: &mut AppContext, event: Event) {
-        let current_code = self.get_current().get_content();
 
         if let Event::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
                     KeyCode::Char(char) => {
+                        let current_code = self.get_current().get_content();
 
                         let mut char_normalized = char.clone().to_string();
                         char_normalized = char_normalized.to_lowercase().to_string();
@@ -186,227 +186,388 @@ impl Component for CodeComponent {
                         }
                     },
                     KeyCode::Up => {
-                        let mut new_line = Line::default();
-                        let mut is_shorter_line = false;
-                        let mut old_end: Point = Point::default();
-
-                        if key.modifiers.contains(KeyModifiers::SHIFT) {
-                            if self.current.get_x() != 0 {
-                                if let Some(selection) = &self.selection {
-                                    old_end = selection.get_end().clone();
-                                }
-
-                                if let Some(old_line) = self.get_current().get_line(old_end.get_x()) {
-                                    if old_end.get_y() > old_line.get_string().len() {
-                                        old_end.set_y(old_line.get_string().len());
-                                    }
-                                    if old_end.get_x() != 0 {
-                                        if let Some(next_line) = self.get_current().get_line(old_end.get_x() - 1) {
-                                            if self.get_current().get_y() > next_line.get_string().len() && old_line.get_string().len() > next_line.get_string().len() {
-                                                is_shorter_line = true;
-                                                new_line = next_line.clone();
+                        self.current.remove_cursor();
+                        //Handles up arrow according to the state of the code, if something is selected has a different behaviour from the normal arrow key
+                        if let Some(selection) = &mut self.selection {
+                            //if something is selected and arrow up is pressed with shift extends the selection to the upper line
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                //if the upper line exists moves the selection to the upper line at the same position occupied from cursor on the current line
+                                if self.current.get_x()>0 {
+                                    let mut current_end = selection.get_end().clone();
+                                    current_end.set_x(current_end.get_x() - 1);
+                                    //also moves the cursor to the new end
+                                    self.current.set_x(current_end.get_x());
+                                    if let Some(upper_line) = self.current.get_line(current_end.get_x()) {
+                                        if let Some(current_line) = self.current.get_line(current_end.get_x() + 1) {
+                                            if upper_line.get_string().len() < current_line.get_string().len() {
+                                                current_end.set_y(upper_line.get_string().len());
+                                                self.current.set_y(upper_line.get_string().len());    
                                             }
+                                            selection.set_end(current_end.clone());
                                         }
+                                    }
+                                } else {
+                                    //else moves the selection to the start of the current line
+                                    let mut current_end = selection.get_end().clone();
+                                    current_end.set_y(0);
+                                    selection.set_end(current_end.clone());
+                                    //also moves the cursor to the new end
+                                    self.current.set_x(current_end.get_x());
+                                    self.current.set_y(current_end.get_y());
+                                }
+                            } else {
+                                //else if there is no shift key pressed removes the selection after setting the cursor to the selection end
+                                let mut current_end = selection.get_end().clone();
+
+                                current_end.set_y(current_end.get_y() - 1);
+                                self.current.set_x(current_end.get_x());
+                                self.current.set_y(current_end.get_y());
+                                self.selection = None;
+                            }
+                        } else {
+                            //if nothing is already selected and shift is pressed creates a selection from the current position of the cursor then moves the cursor to its end
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                let current_x = self.current.get_x();
+                                let current_y = self.current.get_y();
+                                let start_point: Point = Point::new(current_x, current_y);
+                                let end_point: Point;
+                                //if an upper line set the ending point on the upper line
+                                if self.current.get_x() > 0 {
+                                    end_point= Point::new(current_x - 1, current_y);
+                                } else {
+                                    //else extend to the start of the current line
+                                    end_point= Point::new(current_x, 0);
+                                }
+                                self.selection = Some(CodeSelection::new(start_point, end_point.clone()));
+                                if current_y > 0 {
+                                    self.current.set_x(end_point.get_x());
+                                    self.current.set_y(end_point.get_y());    
+                                }
+                            } else {
+                                //else if shift is not pressed and a selection doesn't exist and an upper line exists just moves the cursor to the upper line
+                                if self.current.get_x() > 0 {
+                                    self.current.set_x(self.current.get_x() - 1);
+                                    if let Some(upper_line) = self.current.get_line(self.current.get_x()) {
+                                        if upper_line.get_string().len() < self.current.get_y() {
+                                            self.current.set_y(upper_line.get_string().len());
+                                        } else {
+                                            let current_y = self.current.get_y();
+                                            self.current.set_y(current_y);    
+                                        }                                   
+                                    }
     
-                                    }
-                                }
-
-                                if let Some(selection) = &mut self.selection {
-                                    let mut old_end = selection.get_end().clone();
-                                    if is_shorter_line {
-                                        old_end.set_y(new_line.get_string().len() - 1);
-                                    }
-                                    old_end.set_x(old_end.get_x() - 1);
-
-                                    // If the end is lower on the Y-axis, move it to the upper line
-                                    if old_end.get_y() < selection.get_start().get_y() {
-                                        let temp = old_end.get_y();
-                                        old_end.set_y(selection.get_start().get_y());
-                                        selection.set_start(Point::new(selection.get_start().get_x(), temp));
-                                    }
-
-                                    selection.set_end(old_end);
-                                } else {
-                                    let mut start = Point::new(self.get_current().get_x() - 1, self.get_current().get_y());
-                                    let mut end = Point::new(self.get_current().get_x(), self.get_current().get_y());
-
-                                    // If the end is lower on the Y-axis, move it to the upper line
-                                    if end.get_y() < start.get_y() {
-                                        let temp = end.get_y();
-                                        end.set_y(start.get_y());
-                                        start.set_y(temp);
-                                    }
-
-                                    self.selection = Some(CodeSelection::new(start, end));
-                                }
-                            }
-                        } else {
-                            self.selection = None;
-                        }
-
-                        let mut current_line = self.current.get_x();
-
-                        if current_line > 0 {
-                            self.current.remove_cursor();
-                            current_line -= 1;
-                            self.current.set_x(current_line);
-
-                            if let Some(line) = self.current.get_content().get(current_line) {
-                                if is_shorter_line {
-                                    self.current.set_y(line.get_string().len() - 1);
-                                }
-                            }
-
-                            self.current.set_cursor();
-                        }
-
-
-                    },
-                    KeyCode::Down => {
-                        if key.modifiers.contains(KeyModifiers::SHIFT) {
-                            if self.get_current().get_x() != self.get_current().get_content().len() - 1 {
-                                let mut is_shorter_line = false;
-                                let mut old_end: Point = Point::default();
-                                let mut next_line = Line::default();
-
-                                if let Some(selection) = &self.selection {
-                                    old_end = selection.get_end().clone();
-                                }
-                                if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
-                                    if let Some(new_line) = self.get_current().get_line(old_end.get_x() + 1) {
-                                        if self.get_current().get_y() > new_line.get_string().len() && old_line.get_string().len() > new_line.get_string().len() {
-                                            is_shorter_line = true;
-                                            next_line = new_line.clone();
-                                        }
-                                    }
-                                }
-                                if let Some(selection) = &mut self.selection {
-                                    let mut old_end = selection.get_end().clone();
-                                    if is_shorter_line {
-                                        old_end.set_y(next_line.get_string().len()-1);
-                                    }
-                                    old_end.set_x(old_end.get_x() + 1);
-                                    selection.set_end(old_end);
-                                } else {
-                                    let start = Point::new(
-                                        self.get_current().get_x(),
-                                        self.get_current().get_y(),
-                                    );
-                                    let end = Point::new(
-                                        self.get_current().get_x() + 1,
-                                        self.get_current().get_y(),
-                                    );
-                                    self.selection = Some(CodeSelection::new(
-                                        start,
-                                        end,
-                                    ));
-                                }
-                            }
-                        } else {
-                            self.selection = None;
-                        }
-                        //once selection is processed the cursor gets moved
-                        //if is moving on a shorter line gets to its end
-                        //if is moving on a equal or longer line gets setted on the same position it had on the previous line
-                        let mut is_shorter = false;
-                        let mut current_line = Line::default();
-                        let mut next_line = Line::default();
-                        if let Some(actual_line) = self.get_current().get_line(self.get_current().get_x()) {
-                            if let Some(lower_line) = self.get_current().get_line(self.get_current().get_x() + 1) {
-                                current_line = actual_line.clone();
-                                next_line = lower_line.clone();
-                                if self.get_current().get_y() > next_line.get_string().len() && current_line.get_string().len() > next_line.get_string().len() {
-                                    is_shorter = true;
                                 }
                             }
                         }
-                        self.get_mut_current().remove_cursor();
-                        self.get_mut_current().set_x(current_line.get_number() + 1);
-                        if is_shorter {
-                            self.current.set_y(next_line.get_string().len() - 1);
-                        }
+
                         self.current.set_cursor();
 
                     },
-                    KeyCode::Left => {
-                        if key.modifiers.contains(KeyModifiers::SHIFT) {
-                            if self.get_current().get_y() != 0 {
-                                if let Some(selection) = &mut self.selection {
-                                    let mut old_end = selection.get_end().clone();
-                                    if old_end.get_y() != 0 {
-                                        old_end.set_y(old_end.get_y() - 1);
+                    KeyCode::Down => {
+                        let nlines = self.current.get_content().len();
+                        self.current.remove_cursor();
+
+
+                        //Handles up arrow according to the state of the code, if something is selected has a different behaviour from the normal arrow key
+                        if let Some(selection) = &mut self.selection {
+                            //if something is selected and arrow down is pressed with shift extends the selection to the lower line
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                //if the lower line exists moves the selection to the lower line at the same position occupied from cursor on the current line
+                                if self.current.get_x() < nlines - 1 {
+                                    let mut current_end = selection.get_end().clone();
+                                    current_end.set_x(current_end.get_x() + 1);
+                                    self.current.set_x(current_end.get_x());
+
+                                    if let Some(lower_line) = self.current.get_line(current_end.get_x()) {
+                                        if let Some(current_line) = self.current.get_line(current_end.get_x() - 1) {
+                                            //also moves the cursor to the new end
+                                            if lower_line.get_string().len() < current_line.get_string().len() {
+                                                self.current.set_y(lower_line.get_string().len()-1);
+                                            } else {
+                                                self.current.set_y(current_end.get_y());
+            
+                                            }
+                                            let end_point = Point::new(self.current.get_x(), self.current.get_y());
+                                            selection.set_end(end_point.clone());
+                                        }
                                     }
-                                    selection.set_end(old_end);
                                 } else {
-                                    let start = Point::new(
-                                        self.get_current().get_x(),
-                                        self.get_current().get_y(),
-                                    );
-                                    let end = Point::new(
-                                        self.get_current().get_x(),
-                                        self.get_current().get_y() - 1,
-                                    );
-                                    self.selection = Some(CodeSelection::new(
-                                        start,
-                                        end,
-                                    ));
-                                }    
+                                    let mut end_y = self.current.get_y();
+                                    if let Some(current_line) = self.current.get_content().get(self.current.get_x()) {
+                                        end_y = current_line.get_string().len();
+                                    }
+                                    //else moves the selection to the end of the current line
+                                    let mut current_end = selection.get_end().clone();
+                                    current_end.set_y(end_y);
+                                    selection.set_end(current_end.clone());
+                                    //also moves the cursor to the new end
+                                    self.current.set_x(current_end.get_x());
+                                    self.current.set_y(current_end.get_y());
+                            }
+                            } else {
+                                //else if there is no shift key pressed removes the selection after setting the cursor to the selection end
+                                let mut current_end = selection.get_end().clone();
+                                current_end.set_y(current_end.get_y() + 1);
+                                self.current.set_x(current_end.get_x());
+                                self.current.set_y(current_end.get_y());
+                                self.selection = None;
                             }
                         } else {
-                            self.selection = None;
+                            //if nothing is already selected and shift is pressed creates a selection from the current position of the cursor then moves the cursor to its end
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                let current_x = self.current.get_x();
+                                let current_y = self.current.get_y();
+                                let start_point: Point = Point::new(current_x, current_y);
+                                let end_point: Point;
+                                //if a lower line exists set the ending point on the lower line
+                                if let Some(_lower_line) = self.current.get_content().get(self.current.get_x() + 1) {
+                                    end_point= Point::new(current_x + 1, current_y);
+                                } else {
+                                    //else extend to the end of the current line
+                                    let mut end_y = self.current.get_y();
+                                    if let Some(current_line) = self.current.get_content().get(self.current.get_x()) {
+                                        end_y = current_line.get_string().len()-1;
+                                    }
+                                    end_point= Point::new(current_x, end_y);
+                                }
+                                self.selection = Some(CodeSelection::new(start_point, end_point.clone()));
+                                self.current.set_x(end_point.get_x());
+                                self.current.set_y(end_point.get_y());
+                            } else {
+                                //else if shift is not pressed and a selection doesn't exist and an lower line exists just moves the cursor to the lower line
+                                let current_x = self.current.get_x();
+                                self.current.set_x(current_x + 1);
+                                let mut current_y = self.current.get_y();
+                                if let Some(lower_line) = self.current.get_content().get(self.current.get_x()) {
+                                    if lower_line.get_string().len() < current_y {
+                                        self.current.set_y(lower_line.get_string().len());
+                                    } else {
+                                        self.current.set_y(current_y);
+                                    }
+                                } else {
+                                    //else if a lower line doesn't exist move the cursor to the end of the current line
+                                    if let Some(current_line) = self.current.get_content().get(self.current.get_x()) {
+                                        current_y = current_line.get_string().len() - 1;
+                                    }
+                                    self.current.set_x(current_x);
+                                    self.current.set_y(current_y);
+                                }
+                            }
                         }
-                        let mut current_char = self.current.get_y();
-                        if current_char > 0 {
-                            self.current.remove_cursor();
-                            current_char -= 1;
-                            self.current.set_y(current_char);
-                            self.current.set_cursor();    
-                        }    
+
+                        self.current.set_cursor();
+                    },
+                    KeyCode::Left => {
+                        self.current.remove_cursor();
+
+                        //if a selection exist
+                        let mut selection_exists = false;
+                        let mut start_point = Point::new(self.current.get_x(), self.current.get_y());
+                        let mut end_point = Point::new(self.current.get_x(), self.current.get_y());
+                        if let Some(selection) = &self.selection {
+                            selection_exists = true;
+                            start_point = selection.get_start().clone();
+                            end_point = selection.get_end().clone();
+                        }
+
+                        if selection_exists {
+                            if let Some(mutable_selection) = &mut self.selection {
+                                //  and shift is also pressed
+                                if key.modifiers.contains(KeyModifiers::SHIFT) {
+
+                                    if self.current.get_y() > 0 {
+                                        //      if the start x != end x change the end of the selection to the current y to the current y - 1 (the end point)
+                                        if start_point.get_x() != end_point.get_x() {
+                                            end_point.set_y(end_point.get_y() - 1);
+                                            mutable_selection.set_end(end_point.clone());
+                                            self.current.set_x(end_point.get_x());
+                                        //      then if start x > end x the cursor goes on the left of the end point
+                                            if start_point.get_x() > end_point.get_x() {
+                                                self.current.set_y(end_point.get_y() - 1);
+                                            }
+                                        //      else if the start x < end x the cursor goes on the right of the end point
+                                            else if start_point.get_x() < end_point.get_x() {
+                                                self.current.set_y(end_point.get_y() + 1);
+                                            }
+                                        }
+                                        //      else if the start x == end x
+                                        else if start_point.get_x() == end_point.get_x() {
+                                    //      if start y != end y move the end on the left
+                                            if start_point.get_y() != end_point.get_y() {
+                                                end_point.set_y(end_point.get_y() - 1);
+                                    //          if start y > end y set the cursor on the left of the end point
+                                                if start_point.get_y() > end_point.get_y() {
+                                                    self.current.set_y(end_point.get_y() - 1);
+                                                }
+                                    //          else if start y < end y set the cursor on the right of the end point
+                                                else if start_point.get_y() < end_point.get_y() {
+                                                    self.current.set_y(end_point.get_y() + 1);
+                                                }
+                                            }
+                                        }
+                                    }
+                                
+                                }
+                                //  and shift is not pressed
+                                else {
+                                    //move the cursor the left of the selection and then delete the selection
+                                    //if the start x > end x
+                                    if start_point.get_x() > end_point.get_x() {
+                                    //  the cursor goes to the end
+                                        self.current.set_x(end_point.get_x());
+                                        self.current.set_y(end_point.get_y());
+                                    }
+                                    //else if start x < end x
+                                    else if start_point.get_x() < end_point.get_x() {
+                                    //  the cursor goes to the start
+                                        self.current.set_x(start_point.get_x());
+                                        self.current.set_y(start_point.get_y());
+                                    }
+                                    //else if start x == end x
+                                    else if start_point.get_x() == end_point.get_x() {
+                                    //  and start y > end y
+                                        if start_point.get_y() > end_point.get_y() {
+                                    //      the cursor goes on the end
+                                            self.current.set_x(end_point.get_x());
+                                            self.current.set_y(end_point.get_y());
+                                        }
+                                    //  and start y < end y
+                                        else if start_point.get_y() < end_point.get_y() {
+                                    //      the cursor goes on the start                 
+                                            self.current.set_x(start_point.get_x());
+                                            self.current.set_y(start_point.get_y());                       
+                                        }
+                                    }
+                                    //finally delete the selection
+                                    self.selection = None;
+                                }
+                            }
+                        } else {
+                            //else the selection doesn't exist
+                            //and shift is pressed
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                            //  create a selection from current position of the cursor to 1 on his left and set the cursor
+                                if self.current.get_y() > 0 {
+                                    let start_point = Point::new(self.current.get_x(),self.current.get_y());
+                                    let end_point = Point::new(self.current.get_x(), self.current.get_y() - 1);
+                                    self.selection = Some(CodeSelection::new(start_point, end_point));    
+                                }
+                            }
+                            //  and shift is not pressed
+                            else {
+                            //      move the cursor by 1 on his left
+                                if self.current.get_y() > 0 {
+                                    self.current.set_y(self.current.get_y() - 1);
+                                }
+                            }
+                        }
+
+                        self.current.set_cursor();
+
                     },
                     KeyCode::Right => {
-                        if key.modifiers.contains(KeyModifiers::SHIFT) {
-                            let mut is_end_y = false;
-                            let cursor_position = (self.get_current().get_x(), self.get_current().get_y());
-                            if let Some(line) = self.get_current().get_line(cursor_position.0) {
-                                if let Some(selection) = self.get_selection() {
-                                    if cursor_position.1 == line.get_string().len() - 1 || selection.get_end().get_y() == line.get_string().len() - 1 {
-                                        is_end_y = true;
-                                    }    
+                        self.current.remove_cursor();
+
+                        //if a selection exist
+                        let mut selection_exists = false;
+                        let mut start_point = Point::new(self.current.get_x(), self.current.get_y());
+                        let mut end_point = Point::new(self.current.get_x(), self.current.get_y());
+                        if let Some(selection) = &self.selection {
+                            selection_exists = true;
+                            start_point = selection.get_start().clone();
+                            end_point = selection.get_end().clone();
+                        }
+
+                        if selection_exists {
+                            if let Some(mutable_selection) = &mut self.selection {
+                                //  and shift is also pressed
+                                if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                //      if the start x != end x change the end of the selection to the current y to the current y + 1 (the end point)
+                                    if start_point.get_x() != end_point.get_x() {
+                                        end_point.set_y(end_point.get_y() + 1);
+                                        mutable_selection.set_end(end_point.clone());
+                                        self.current.set_x(end_point.get_x());
+                                //      then if start x > end x the cursor goes on the left of the end point
+                                        if start_point.get_x() > end_point.get_x() {
+                                            self.current.set_y(end_point.get_y());
+                                        }
+                                //      else if the start x < end x the cursor goes on the right of the end point
+                                        else if start_point.get_x() < end_point.get_x() {
+                                            self.current.set_y(end_point.get_y());
+                                        }
+                                    }
+                                //      else if the start x == end x
+                                    else if start_point.get_x() == end_point.get_x() {
+                                //      if start y != end y move the end on the left
+                                        if start_point.get_y() != end_point.get_y() {
+                                            end_point.set_y(end_point.get_y() + 1);
+                                //          if start y > end y set the cursor on the left of the end point
+                                            if start_point.get_y() > end_point.get_y() {
+                                                self.current.set_y(end_point.get_y() - 1);
+                                            }
+                                //          else if start y < end y set the cursor on the right of the end point
+                                            else if start_point.get_y() < end_point.get_y() {
+                                                self.current.set_y(end_point.get_y() + 1);
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                            if let Some(selection) = &mut self.selection {
-                                let mut old_end = selection.get_end().clone();
-                                if !is_end_y {
-                                    old_end.set_y(old_end.get_y() + 1);
+                                //  and shift is not pressed
+                                else {
+                                    //move the cursor the right of the selection and then delete the selection
+                                    //if the start x > end x
+                                    if start_point.get_x() > end_point.get_x() {
+                                    //  the cursor goes to the start
+                                        self.current.set_x(start_point.get_x());
+                                        self.current.set_y(start_point.get_y());
+                                    }
+                                    //else if start x < end x
+                                    else if start_point.get_x() < end_point.get_x() {
+                                    //  the cursor goes to the start
+                                        self.current.set_x(end_point.get_x());
+                                        self.current.set_y(end_point.get_y());
+                                    }
+                                    //else if start x == end x
+                                    else if start_point.get_x() == end_point.get_x() {
+                                    //  and start y > end y
+                                        if start_point.get_y() > end_point.get_y() {
+                                    //      the cursor goes on the end
+                                            self.current.set_x(start_point.get_x());
+                                            self.current.set_y(start_point.get_y());
+                                        }
+                                    //  and start y < end y
+                                        else if start_point.get_y() < end_point.get_y() {
+                                    //      the cursor goes on the start                 
+                                            self.current.set_x(end_point.get_x());
+                                            self.current.set_y(end_point.get_y());                       
+                                        }
+                                    }
+                                    //finally delete the selection
+                                    self.selection = None;
                                 }
-                                selection.set_end(old_end);
-                            } else {
-                                let start = Point::new(
-                                    self.get_current().get_x(),
-                                    self.get_current().get_y(),
-                                );
-                                let end = Point::new(
-                                    self.get_current().get_x(),
-                                    self.get_current().get_y() + 1,
-                                );
-                                self.selection = Some(CodeSelection::new(
-                                    start,
-                                    end,
-                                ));
                             }
                         } else {
-                            self.selection = None;
-                        }
-                        let actual_code = self.get_current();
-                        let mut current_char = self.current.get_y();
-                        if let Some(line) = actual_code.get_content().get(actual_code.get_x()) {
-                            if current_char < line.get_string().len() - 1{
-                                self.current.remove_cursor();
-                                current_char += 1;
-                                self.current.set_y(current_char);
-                                self.current.set_cursor();
+                            //else the selection doesn't exist
+                            //and shift is pressed
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                            //  create a selection from current position of the cursor to 1 on his right and set the cursor
+                                let start_point = Point::new(self.current.get_x(),self.current.get_y());
+                                let end_point = Point::new(self.current.get_x(), self.current.get_y() + 1);
+                                self.selection = Some(CodeSelection::new(start_point, end_point));
+                            }
+                            //  and shift is not pressed
+                            else {
+                            //      move the cursor by 1 on his right
+                                if let Some(upper_line) = self.current.get_line(self.current.get_x()) {
+                                    if self.current.get_y() < upper_line.get_string().len() - 1 {
+                                        self.current.set_y(self.current.get_y() + 1);
+                                    }
+                                }
                             }
                         }
+
+                        self.current.set_cursor();
+
                     },
                     KeyCode::Esc => {
                         context.set_focus(None);
@@ -463,213 +624,393 @@ impl Component for CodeComponent {
                         }
                     },
                     KeyCode::Up => {
-                        let mut new_line = Line::default();
-                        let mut is_shorter_line = false;
-                        let mut old_end: Point = Point::default();
-
-                        if key.modifiers.contains(KeyModifiers::SHIFT) {
-
-                            if self.current.get_x() != 0 {
-                                
-                                if let Some(selection) = &self.selection {
-                                    old_end = selection.get_end().clone();
-                                }
-                                if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
-                                    if let Some(next_line) = self.get_current().get_line(old_end.get_x() - 1) {
-                                        if self.get_current().get_y() > next_line.get_string().len() && old_line.get_string().len() > next_line.get_string().len() {
-                                            is_shorter_line = true;
-                                            new_line = next_line.clone();
+                        self.current.remove_cursor();
+                        //Handles up arrow according to the state of the code, if something is selected has a different behaviour from the normal arrow key
+                        if let Some(selection) = &mut self.selection {
+                            //if something is selected and arrow up is pressed with shift extends the selection to the upper line
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                //if the upper line exists moves the selection to the upper line at the same position occupied from cursor on the current line
+                                if self.current.get_x()>0 {
+                                    let mut current_end = selection.get_end().clone();
+                                    current_end.set_x(current_end.get_x() - 1);
+                                    //also moves the cursor to the new end
+                                    self.current.set_x(current_end.get_x());
+                                    if let Some(upper_line) = self.current.get_line(current_end.get_x()) {
+                                        if let Some(current_line) = self.current.get_line(current_end.get_x() + 1) {
+                                            if upper_line.get_string().len() < current_line.get_string().len() {
+                                                current_end.set_y(upper_line.get_string().len());
+                                                self.current.set_y(upper_line.get_string().len());    
+                                            }
+                                            selection.set_end(current_end.clone());
                                         }
                                     }
-                                }
-                                if let Some(selection) = &mut self.selection {
-                                    let mut old_end = selection.get_end().clone();
-                                    if is_shorter_line {
-                                        old_end.set_y(new_line.get_string().len()-1);
-                                    }
-                                    old_end.set_x(old_end.get_x() - 1);
-                                    selection.set_end(old_end);
                                 } else {
-                                    let start = Point::new(
-                                        self.get_current().get_x() - 1,
-                                        self.get_current().get_y(),
-                                    );
-                                    let end = Point::new(
-                                        self.get_current().get_x(),
-                                        self.get_current().get_y(),
-                                    );
-                                    self.selection = Some(CodeSelection::new(
-                                        start,
-                                        end,
-                                    ));
+                                    //else moves the selection to the start of the current line
+                                    let mut current_end = selection.get_end().clone();
+                                    current_end.set_y(0);
+                                    selection.set_end(current_end.clone());
+                                    //also moves the cursor to the new end
+                                    self.current.set_x(current_end.get_x());
+                                    self.current.set_y(current_end.get_y());
                                 }
+                            } else {
+                                //else if there is no shift key pressed removes the selection after setting the cursor to the selection end
+                                let mut current_end = selection.get_end().clone();
+
+                                current_end.set_y(current_end.get_y() - 1);
+                                self.current.set_x(current_end.get_x());
+                                self.current.set_y(current_end.get_y());
+                                self.selection = None;
                             }
                         } else {
-                            self.selection = None;
-                        }
-
-                        let mut current_line = self.current.get_x();
-                        if current_line > 0 {
-                            self.current.remove_cursor();
-                            current_line -= 1;
-                            self.current.set_x(current_line);
-                            if let Some(line) = self.current.get_content().get(current_line) {
-                                if is_shorter_line {
-                                    self.current.set_y(line.get_string().len() - 1);
-                                }
-                            }
-                            self.current.set_cursor();
-                        }
-                    },
-                    KeyCode::Down => {
-                        if key.modifiers.contains(KeyModifiers::SHIFT) {
-                            if self.get_current().get_x() != self.get_current().get_content().len() - 1 {
-                                let mut is_shorter_line = false;
-                                let mut old_end: Point = Point::default();
-                                let mut next_line = Line::default();
-
-                                if let Some(selection) = &self.selection {
-                                    old_end = selection.get_end().clone();
-                                }
-                                if let Some(old_line) = self.get_current().get_line(old_end.get_x())  {
-                                    if let Some(new_line) = self.get_current().get_line(old_end.get_x() + 1) {
-                                        if self.get_current().get_y() > new_line.get_string().len() && old_line.get_string().len() > new_line.get_string().len() {
-                                            is_shorter_line = true;
-                                            next_line = new_line.clone();
-                                        }
-                                    }
-                                }
-                                if let Some(selection) = &mut self.selection {
-                                    let mut old_end = selection.get_end().clone();
-                                    if is_shorter_line {
-                                        old_end.set_y(next_line.get_string().len()-1);
-                                    }
-                                    old_end.set_x(old_end.get_x() + 1);
-                                    selection.set_end(old_end);
+                            //if nothing is already selected and shift is pressed creates a selection from the current position of the cursor then moves the cursor to its end
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                let current_x = self.current.get_x();
+                                let current_y = self.current.get_y();
+                                let start_point: Point = Point::new(current_x, current_y);
+                                let end_point: Point;
+                                //if an upper line set the ending point on the upper line
+                                if self.current.get_x() > 0 {
+                                    end_point= Point::new(current_x - 1, current_y);
                                 } else {
-                                    let start = Point::new(
-                                        self.get_current().get_x(),
-                                        self.get_current().get_y(),
-                                    );
-                                    let end = Point::new(
-                                        self.get_current().get_x() + 1,
-                                        self.get_current().get_y(),
-                                    );
-                                    self.selection = Some(CodeSelection::new(
-                                        start,
-                                        end,
-                                    ));
+                                    //else extend to the start of the current line
+                                    end_point= Point::new(current_x, 0);
                                 }
-                            }
-                        } else {
-                            self.selection = None;
-                        }
-                        //once selection is processed the cursor gets moved
-                        //if is moving on a shorter line gets to its end
-                        //if is moving on a equal or longer line gets setted on the same position it had on the previous line
-                        let mut is_shorter = false;
-                        let mut current_line = Line::default();
-                        let mut next_line = Line::default();
-                        if let Some(actual_line) = self.get_current().get_line(self.get_current().get_x()) {
-                            if let Some(lower_line) = self.get_current().get_line(self.get_current().get_x() + 1) {
-                                current_line = actual_line.clone();
-                                next_line = lower_line.clone();
-                                if self.get_current().get_y() > next_line.get_string().len() && current_line.get_string().len() > next_line.get_string().len() {
-                                    is_shorter = true;
+                                self.selection = Some(CodeSelection::new(start_point, end_point.clone()));
+                                if current_y > 0 {
+                                    self.current.set_x(end_point.get_x());
+                                    self.current.set_y(end_point.get_y());    
+                                }
+                            } else {
+                                //else if shift is not pressed and a selection doesn't exist and an upper line exists just moves the cursor to the upper line
+                                if self.current.get_x() > 0 {
+                                    self.current.set_x(self.current.get_x() - 1);
+                                    if let Some(upper_line) = self.current.get_line(self.current.get_x()) {
+                                        if upper_line.get_string().len() < self.current.get_y() {
+                                            self.current.set_y(upper_line.get_string().len());
+                                        } else {
+                                            let current_y = self.current.get_y();
+                                            self.current.set_y(current_y);    
+                                        }                                   
+                                    }
+    
                                 }
                             }
                         }
-                        self.get_mut_current().remove_cursor();
-                        self.get_mut_current().set_x(current_line.get_number() + 1);
-                        if is_shorter {
-                            self.current.set_y(next_line.get_string().len() - 1);
-                        }
+
                         self.current.set_cursor();
 
                     },
-                    KeyCode::Left => {
-                        if key.modifiers.contains(KeyModifiers::SHIFT) {
-                            if self.get_current().clone().get_y() != 0 {
-                                if let Some(selection) = &mut self.selection {
-                                    let mut old_end = selection.get_end().clone();
-                                    if old_end.get_y() != 0 {
-                                        old_end.set_y(old_end.get_y() - 1);
+                    KeyCode::Down => {
+                        let nlines = self.current.get_content().len();
+                        self.current.remove_cursor();
+
+
+                        //Handles up arrow according to the state of the code, if something is selected has a different behaviour from the normal arrow key
+                        if let Some(selection) = &mut self.selection {
+                            //if something is selected and arrow down is pressed with shift extends the selection to the lower line
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                //if the lower line exists moves the selection to the lower line at the same position occupied from cursor on the current line
+                                if self.current.get_x() < nlines - 1 {
+                                    let mut current_end = selection.get_end().clone();
+                                    current_end.set_x(current_end.get_x() + 1);
+                                    self.current.set_x(current_end.get_x());
+
+                                    if let Some(lower_line) = self.current.get_line(current_end.get_x()) {
+                                        if let Some(current_line) = self.current.get_line(current_end.get_x() - 1) {
+                                            //also moves the cursor to the new end
+                                            if lower_line.get_string().len() < current_line.get_string().len() {
+                                                self.current.set_y(lower_line.get_string().len()-1);
+                                            } else {
+                                                self.current.set_y(current_end.get_y());
+            
+                                            }
+                                            let end_point = Point::new(self.current.get_x(), self.current.get_y());
+                                            selection.set_end(end_point.clone());
+                                        }
                                     }
-                                    selection.set_end(old_end);
                                 } else {
-                                    let start = Point::new(
-                                        self.get_current().get_x(),
-                                        self.get_current().get_y() - 1,
-                                    );
-                                    let end = Point::new(
-                                        self.get_current().get_x(),
-                                        self.get_current().get_y(),
-                                    );
-                                    self.selection = Some(CodeSelection::new(
-                                        start,
-                                        end,
-                                    ));
-                                }    
+                                    let mut end_y = self.current.get_y();
+                                    if let Some(current_line) = self.current.get_content().get(self.current.get_x()) {
+                                        end_y = current_line.get_string().len();
+                                    }
+                                    //else moves the selection to the end of the current line
+                                    let mut current_end = selection.get_end().clone();
+                                    current_end.set_y(end_y);
+                                    selection.set_end(current_end.clone());
+                                    //also moves the cursor to the new end
+                                    self.current.set_x(current_end.get_x());
+                                    self.current.set_y(current_end.get_y());
+                            }
+                            } else {
+                                //else if there is no shift key pressed removes the selection after setting the cursor to the selection end
+                                let mut current_end = selection.get_end().clone();
+                                current_end.set_y(current_end.get_y() + 1);
+                                self.current.set_x(current_end.get_x());
+                                self.current.set_y(current_end.get_y());
+                                self.selection = None;
                             }
                         } else {
-                            self.selection = None;
+                            //if nothing is already selected and shift is pressed creates a selection from the current position of the cursor then moves the cursor to its end
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                let current_x = self.current.get_x();
+                                let current_y = self.current.get_y();
+                                let start_point: Point = Point::new(current_x, current_y);
+                                let end_point: Point;
+                                //if a lower line exists set the ending point on the lower line
+                                if let Some(_lower_line) = self.current.get_content().get(self.current.get_x() + 1) {
+                                    end_point= Point::new(current_x + 1, current_y);
+                                } else {
+                                    //else extend to the end of the current line
+                                    let mut end_y = self.current.get_y();
+                                    if let Some(current_line) = self.current.get_content().get(self.current.get_x()) {
+                                        end_y = current_line.get_string().len()-1;
+                                    }
+                                    end_point= Point::new(current_x, end_y);
+                                }
+                                self.selection = Some(CodeSelection::new(start_point, end_point.clone()));
+                                self.current.set_x(end_point.get_x());
+                                self.current.set_y(end_point.get_y());
+                            } else {
+                                //else if shift is not pressed and a selection doesn't exist and an lower line exists just moves the cursor to the lower line
+                                let current_x = self.current.get_x();
+                                self.current.set_x(current_x + 1);
+                                let mut current_y = self.current.get_y();
+                                if let Some(lower_line) = self.current.get_content().get(self.current.get_x()) {
+                                    if lower_line.get_string().len() < current_y {
+                                        self.current.set_y(lower_line.get_string().len());
+                                    } else {
+                                        self.current.set_y(current_y);
+                                    }
+                                } else {
+                                    //else if a lower line doesn't exist move the cursor to the end of the current line
+                                    if let Some(current_line) = self.current.get_content().get(self.current.get_x()) {
+                                        current_y = current_line.get_string().len() - 1;
+                                    }
+                                    self.current.set_x(current_x);
+                                    self.current.set_y(current_y);
+                                }
+                            }
                         }
-                        let mut current_char = self.current.get_y();
-                        if current_char > 0 {
-                            self.current.remove_cursor();
-                            current_char -= 1;
-                            self.current.set_y(current_char);
-                            self.current.set_cursor();
-                        }    
+
+                        self.current.set_cursor();
+                    },
+                    KeyCode::Left => {
+                        self.current.remove_cursor();
+
+                        //if a selection exist
+                        let mut selection_exists = false;
+                        let mut start_point = Point::new(self.current.get_x(), self.current.get_y());
+                        let mut end_point = Point::new(self.current.get_x(), self.current.get_y());
+                        if let Some(selection) = &self.selection {
+                            selection_exists = true;
+                            start_point = selection.get_start().clone();
+                            end_point = selection.get_end().clone();
+                        }
+
+                        if selection_exists {
+                            if let Some(mutable_selection) = &mut self.selection {
+                                //  and shift is also pressed
+                                if key.modifiers.contains(KeyModifiers::SHIFT) {
+
+                                    if self.current.get_y() > 0 {
+                                        //      if the start x != end x change the end of the selection to the current y to the current y - 1 (the end point)
+                                        if start_point.get_x() != end_point.get_x() {
+                                            end_point.set_y(end_point.get_y() - 1);
+                                            mutable_selection.set_end(end_point.clone());
+                                            self.current.set_x(end_point.get_x());
+                                        //      then if start x > end x the cursor goes on the left of the end point
+                                            if start_point.get_x() > end_point.get_x() {
+                                                self.current.set_y(end_point.get_y() - 1);
+                                            }
+                                        //      else if the start x < end x the cursor goes on the right of the end point
+                                            else if start_point.get_x() < end_point.get_x() {
+                                                self.current.set_y(end_point.get_y() + 1);
+                                            }
+                                        }
+                                        //      else if the start x == end x
+                                        else if start_point.get_x() == end_point.get_x() {
+                                    //      if start y != end y move the end on the left
+                                            if start_point.get_y() != end_point.get_y() {
+                                                end_point.set_y(end_point.get_y() - 1);
+                                    //          if start y > end y set the cursor on the left of the end point
+                                                if start_point.get_y() > end_point.get_y() {
+                                                    self.current.set_y(end_point.get_y() - 1);
+                                                }
+                                    //          else if start y < end y set the cursor on the right of the end point
+                                                else if start_point.get_y() < end_point.get_y() {
+                                                    self.current.set_y(end_point.get_y() + 1);
+                                                }
+                                            }
+                                        }
+                                    }
+                                
+                                }
+                                //  and shift is not pressed
+                                else {
+                                    //move the cursor the left of the selection and then delete the selection
+                                    //if the start x > end x
+                                    if start_point.get_x() > end_point.get_x() {
+                                    //  the cursor goes to the end
+                                        self.current.set_x(end_point.get_x());
+                                        self.current.set_y(end_point.get_y());
+                                    }
+                                    //else if start x < end x
+                                    else if start_point.get_x() < end_point.get_x() {
+                                    //  the cursor goes to the start
+                                        self.current.set_x(start_point.get_x());
+                                        self.current.set_y(start_point.get_y());
+                                    }
+                                    //else if start x == end x
+                                    else if start_point.get_x() == end_point.get_x() {
+                                    //  and start y > end y
+                                        if start_point.get_y() > end_point.get_y() {
+                                    //      the cursor goes on the end
+                                            self.current.set_x(end_point.get_x());
+                                            self.current.set_y(end_point.get_y());
+                                        }
+                                    //  and start y < end y
+                                        else if start_point.get_y() < end_point.get_y() {
+                                    //      the cursor goes on the start                 
+                                            self.current.set_x(start_point.get_x());
+                                            self.current.set_y(start_point.get_y());                       
+                                        }
+                                    }
+                                    //finally delete the selection
+                                    self.selection = None;
+                                }
+                            }
+                        } else {
+                            //else the selection doesn't exist
+                            //and shift is pressed
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                            //  create a selection from current position of the cursor to 1 on his left and set the cursor
+                                if self.current.get_y() > 0 {
+                                    let start_point = Point::new(self.current.get_x(),self.current.get_y());
+                                    let end_point = Point::new(self.current.get_x(), self.current.get_y() - 1);
+                                    self.selection = Some(CodeSelection::new(start_point, end_point));    
+                                }
+                            }
+                            //  and shift is not pressed
+                            else {
+                            //      move the cursor by 1 on his left
+                                if self.current.get_y() > 0 {
+                                    self.current.set_y(self.current.get_y() - 1);
+                                }
+                            }
+                        }
+
+                        self.current.set_cursor();
+
                     },
                     KeyCode::Right => {
-                        if key.modifiers.contains(KeyModifiers::SHIFT) {
-                            let mut is_end_y = false;
-                            let cursor_position = (self.get_current().get_x(), self.get_current().get_y());
-                            if let Some(line) = self.get_current().get_line(cursor_position.0) {
-                                if  cursor_position.1 == line.get_string().len() - 1 {
-                                    if let Some(line) = self.get_current().get_line(cursor_position.0) {
-                                        if let Some(selection) = self.get_selection() {
-                                            if cursor_position.1 == line.get_string().len() - 1 || selection.get_end().get_y() == line.get_string().len() - 1 {
-                                                is_end_y = true;
-                                            }    
+                        self.current.remove_cursor();
+
+                        //if a selection exist
+                        let mut selection_exists = false;
+                        let mut start_point = Point::new(self.current.get_x(), self.current.get_y());
+                        let mut end_point = Point::new(self.current.get_x(), self.current.get_y());
+                        if let Some(selection) = &self.selection {
+                            selection_exists = true;
+                            start_point = selection.get_start().clone();
+                            end_point = selection.get_end().clone();
+                        }
+
+                        if selection_exists {
+                            if let Some(mutable_selection) = &mut self.selection {
+                                //  and shift is also pressed
+                                if key.modifiers.contains(KeyModifiers::SHIFT) {
+                                //      if the start x != end x change the end of the selection to the current y to the current y + 1 (the end point)
+                                    if start_point.get_x() != end_point.get_x() {
+                                        if let Some(current_line) = self.current.get_line(end_point.get_x()) {
+                                            if self.current.get_y() < current_line.get_string().len() - 1 {
+                                                end_point.set_y(end_point.get_y() + 1);   
+                                                mutable_selection.set_end(end_point.clone());
+                                                self.current.set_x(end_point.get_x());
+                                        //      then if start x > end x the cursor goes on the left of the end point
+                                                if start_point.get_x() > end_point.get_x() {
+                                                    self.current.set_y(end_point.get_y());
+                                                }
+                                        //      else if the start x < end x the cursor goes on the right of the end point
+                                                else if start_point.get_x() < end_point.get_x() {
+                                                    self.current.set_y(end_point.get_y());
+                                                }
+                                            }
+                                        }
+                                    }
+                                //      else if the start x == end x
+                                    else if start_point.get_x() == end_point.get_x() {
+                                //      if start y != end y move the end on the left
+                                        if start_point.get_y() != end_point.get_y() {
+                                            end_point.set_y(end_point.get_y() + 1);
+                                //          if start y > end y set the cursor on the left of the end point
+                                            if start_point.get_y() > end_point.get_y() {
+                                                self.current.set_y(start_point.get_y() - 1);
+                                            }
+                                //          else if start y < end y set the cursor on the right of the end point
+                                            else if start_point.get_y() < end_point.get_y() {
+                                                self.current.set_y(end_point.get_y() + 1);
+                                            }
+                                            mutable_selection.set_end(end_point);
                                         }
                                     }
                                 }
-                            }
-                            if let Some(selection) = &mut self.selection {
-                                let mut old_end = selection.get_end().clone();
-                                if !is_end_y {
-                                    old_end.set_y(old_end.get_y() + 1);
+                                //  and shift is not pressed
+                                else {
+                                    //move the cursor the right of the selection and then delete the selection
+                                    //if the start x > end x
+                                    if start_point.get_x() > end_point.get_x() {
+                                    //  the cursor goes to the start
+                                        self.current.set_x(start_point.get_x());
+                                        self.current.set_y(start_point.get_y());
+                                    }
+                                    //else if start x < end x
+                                    else if start_point.get_x() < end_point.get_x() {
+                                    //  the cursor goes to the start
+                                        self.current.set_x(end_point.get_x());
+                                        self.current.set_y(end_point.get_y());
+                                    }
+                                    //else if start x == end x
+                                    else if start_point.get_x() == end_point.get_x() {
+                                    //  and start y > end y
+                                        if start_point.get_y() > end_point.get_y() {
+                                    //      the cursor goes on the end
+                                            self.current.set_x(start_point.get_x());
+                                            self.current.set_y(start_point.get_y());
+                                        }
+                                    //  and start y < end y
+                                        else if start_point.get_y() < end_point.get_y() {
+                                    //      the cursor goes on the start                 
+                                            self.current.set_x(end_point.get_x());
+                                            self.current.set_y(end_point.get_y());                       
+                                        }
+                                    }
+                                    //finally delete the selection
+                                    self.selection = None;
                                 }
-                                selection.set_end(old_end);
-                            } else {
-                                let start = Point::new(
-                                    self.get_current().get_x(),
-                                    self.get_current().get_y(),
-                                );
-                                let end = Point::new(
-                                    self.get_current().get_x(),
-                                    self.get_current().get_y() + 1,
-                                );
-                                self.selection = Some(CodeSelection::new(
-                                    start,
-                                    end,
-                                ));
                             }
                         } else {
-                            self.selection = None;
-                        }
-                        let actual_code = self.get_current();
-                        let mut current_char = self.current.get_y();
-                        if let Some(line) = actual_code.get_content().get(actual_code.get_x()) {
-                            if current_char < line.get_string().len() - 1{
-                                self.current.remove_cursor();
-                                current_char += 1;
-                                self.current.set_y(current_char);
-                                self.current.set_cursor();
+                            //else the selection doesn't exist
+                            //and shift is pressed
+                            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                            //  create a selection from current position of the cursor to 1 on his right and set the cursor
+                                let start_point = Point::new(self.current.get_x(),self.current.get_y());
+                                let end_point = Point::new(self.current.get_x(), self.current.get_y() + 1);
+                                self.selection = Some(CodeSelection::new(start_point, end_point));
+                            }
+                            //  and shift is not pressed
+                            else {
+                            //      move the cursor by 1 on his right
+                                if let Some(upper_line) = self.current.get_line(self.current.get_x()) {
+                                    if self.current.get_y() < upper_line.get_string().len() - 1 {
+                                        self.current.set_y(self.current.get_y() + 1);
+                                    }
+                                }
                             }
                         }
+
+                        self.current.set_cursor();
+
                     },
                     _ => {}
                 }
@@ -721,5 +1062,9 @@ impl CodeComponent {
 
     pub fn get_selection(&self) -> &Option<CodeSelection> {
         &self.selection
+    }
+
+    pub fn get_mut_selection(&mut self) -> Option<&mut CodeSelection> {
+        self.selection.as_mut()
     }
 }
