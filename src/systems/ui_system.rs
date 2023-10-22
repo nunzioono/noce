@@ -103,7 +103,7 @@ impl UiSystem {
         //Prepare data to conditionally render different variants of the same ui
         let context_focus: Option<ComponentType> = context.focus().clone();
         let context_hover: ComponentType = context.hover().clone();
-        let area = self.layout_center(90, 94, code_area);
+        let area = self.layout_center(90, 80, code_area);
         let layout_code = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Ratio(1, 10),Constraint::Ratio(9, 10)])
@@ -181,13 +181,14 @@ impl UiSystem {
                 }
             } else if focus == Some(&ComponentType::Code) && start_point.get_x() > end_point.get_x() {
                 //selection multiple lines right to left
-                if line_number <= start_point.get_x() && line_number >= end_point.get_x() {
+                if line_number <= start_point.get_x() && line_number >= end_point.get_x() && start_point.get_x() != end_point.get_x() {
                     //current line is inside the selection or first or last line of the selection
+                    todo!("Fix selection on a single line with the cursor on the upper one");
                     if line_number == end_point.get_x() {
                         //first line
                         let not_styled = Span::from(line.get_string()[..end_point.get_y()].to_string());
-                        let styled = Span::from(line.get_string()[end_point.get_y()..].to_string());
                         vec.push(not_styled.set_style(style));
+                        let styled = Span::from(line.get_string()[end_point.get_y()..].to_string());
                         vec.push(styled.set_style(selection_style));
                     } else if line_number == start_point.get_x() {
                         //last line
@@ -200,6 +201,38 @@ impl UiSystem {
                         let styled = Span::from(line.get_string());
                         vec.push(styled.set_style(selection_style));
                     }
+                } else if start_point.get_x() == end_point.get_x() {
+                    if start_point.get_y() > end_point.get_y() {
+                        if end_point.get_y() != 0 {
+                            let not_styled = Span::from(line.get_string()[..end_point.get_y()].to_string());
+                            vec.push(not_styled.set_style(style));
+                        }
+                        let styled = Span::from(line.get_string()[end_point.get_y()..start_point.get_y()].to_string());
+                        vec.push(styled.set_style(selection_style));
+                        if start_point.get_y() != line.get_string().len() - 1 {
+                            let not_styled = Span::from(line.get_string()[start_point.get_y()..].to_string());
+                            vec.push(not_styled.set_style(style));
+                        }
+                    } else if start_point.get_y() < end_point.get_y() {
+                        if start_point.get_y() != 0 {
+                            let not_styled = Span::from(line.get_string()[..start_point.get_y()].to_string());
+                            vec.push(not_styled.set_style(style));
+                        }
+                        let styled = Span::from(line.get_string()[start_point.get_y()..end_point.get_y()].to_string());
+                        vec.push(styled.set_style(selection_style));
+                        if end_point.get_y() != line.get_string().len() - 1 {
+                            let not_styled = Span::from(line.get_string()[end_point.get_y()..].to_string());
+                            vec.push(not_styled.set_style(style));
+                        }
+                    } else if start_point.get_y() == end_point.get_y() {
+                        let not_styled = Span::from(line.get_string());
+                        vec.push(not_styled.set_style(style));
+                    }
+                    let not_styled = Span::from(line.get_string()[start_point.get_y()..].to_string());
+                    let styled = Span::from(line.get_string()[..start_point.get_y()].to_string());
+                    let not_styled2 = Span::from(line.get_string()[start_point.get_y()..].to_string());
+                    vec.push(styled.set_style(selection_style));
+                    vec.push(not_styled.set_style(style));
                 } else {
                     //lines out of the selection
                     let not_styled = Span::from(line.get_string());
@@ -249,9 +282,11 @@ impl UiSystem {
 
         let list_numbers = List::new(numbers);
 
+        let mut state = ListState::default().with_selected(Some(app.get_code().get_current().get_x()));
+        
         frame.render_widget(block, code_area);
-        frame.render_widget(list_numbers, layout_code.get(0).unwrap().clone());
-        frame.render_widget(list_lines, layout_code.get(1).unwrap().clone());
+        frame.render_stateful_widget(list_numbers, layout_code.get(0).unwrap().clone(), &mut state);
+        frame.render_stateful_widget(list_lines, layout_code.get(1).unwrap().clone(), &mut state);
 
 
 

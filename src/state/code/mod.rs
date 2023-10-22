@@ -194,14 +194,17 @@ impl Component for CodeComponent {
                                 //if the upper line exists moves the selection to the upper line at the same position occupied from cursor on the current line
                                 if self.current.get_x()>0 {
                                     let mut current_end = selection.get_end().clone();
-                                    current_end.set_x(current_end.get_x() - 1);
+                                    current_end.set_x(current_end.get_x()- 1);
                                     //also moves the cursor to the new end
                                     self.current.set_x(current_end.get_x());
                                     if let Some(upper_line) = self.current.get_line(current_end.get_x()) {
                                         if let Some(current_line) = self.current.get_line(current_end.get_x() + 1) {
-                                            if upper_line.get_string().len() < current_line.get_string().len() {
+                                            if upper_line.get_string().len() < self.current.get_y() {
                                                 current_end.set_y(upper_line.get_string().len());
                                                 self.current.set_y(upper_line.get_string().len());    
+                                            } else {
+                                                current_end.set_y(current_end.get_y());
+                                                self.current.set_y(current_end.get_y()-1);
                                             }
                                             selection.set_end(current_end.clone());
                                         }
@@ -209,11 +212,11 @@ impl Component for CodeComponent {
                                 } else {
                                     //else moves the selection to the start of the current line
                                     let mut current_end = selection.get_end().clone();
-                                    current_end.set_y(0);
+                                    current_end.set_y(1);
                                     selection.set_end(current_end.clone());
                                     //also moves the cursor to the new end
                                     self.current.set_x(current_end.get_x());
-                                    self.current.set_y(current_end.get_y());
+                                    self.current.set_y(0);
                                 }
                             } else {
                                 //else if there is no shift key pressed removes the selection after setting the cursor to the selection end
@@ -230,7 +233,7 @@ impl Component for CodeComponent {
                                 let current_x = self.current.get_x();
                                 let current_y = self.current.get_y();
                                 let start_point: Point = Point::new(current_x, current_y);
-                                let end_point: Point;
+                                let mut end_point: Point;
                                 //if an upper line set the ending point on the upper line
                                 if self.current.get_x() > 0 {
                                     end_point= Point::new(current_x - 1, current_y);
@@ -239,10 +242,23 @@ impl Component for CodeComponent {
                                     end_point= Point::new(current_x, 0);
                                 }
                                 self.selection = Some(CodeSelection::new(start_point, end_point.clone()));
-                                if current_y > 0 {
-                                    self.current.set_x(end_point.get_x());
-                                    self.current.set_y(end_point.get_y());    
+                                let mut upper_len = end_point.get_y() - 1;
+                                if let Some(upper_line) = self.current.get_line(end_point.clone().get_x()) {
+                                    upper_len = upper_line.get_string().len()-1;
                                 }
+                                self.current.set_x(end_point.get_x());
+                                if upper_len > end_point.get_y() {
+                                    if current_y > 0 {
+                                        self.current.set_y(end_point.get_y()-1);    
+                                    } else {
+                                        self.current.set_y(end_point.get_y());    
+                                    }
+                                } else if upper_len <= end_point.get_y() {
+                                    end_point.set_x(end_point.get_x()+1);
+                                    end_point.set_y(0);
+                                    self.current.set_y(upper_len);
+                                }   
+
                             } else {
                                 //else if shift is not pressed and a selection doesn't exist and an upper line exists just moves the cursor to the upper line
                                 if self.current.get_x() > 0 {
@@ -375,20 +391,21 @@ impl Component for CodeComponent {
                                 //  and shift is also pressed
                                 if key.modifiers.contains(KeyModifiers::SHIFT) {
 
-                                    if self.current.get_y() > 0 {
+                                    if end_point.get_y() > 0 {
                                         //      if the start x != end x change the end of the selection to the current y to the current y - 1 (the end point)
                                         if start_point.get_x() != end_point.get_x() {
-                                            end_point.set_y(end_point.get_y() - 1);
-                                            mutable_selection.set_end(end_point.clone());
-                                            self.current.set_x(end_point.get_x());
                                         //      then if start x > end x the cursor goes on the left of the end point
-                                            if start_point.get_x() > end_point.get_x() {
-                                                self.current.set_y(end_point.get_y() - 1);
+                                            if start_point.get_x() > end_point.get_x() && end_point.get_y() > 0{
+                                                self.current.set_x(end_point.get_x());    
+                                                end_point.set_y(end_point.get_y()-1);
+                                                self.current.set_y(end_point.get_y()-1);
                                             }
                                         //      else if the start x < end x the cursor goes on the right of the end point
                                             else if start_point.get_x() < end_point.get_x() {
                                                 self.current.set_y(end_point.get_y() + 1);
                                             }
+
+                                            mutable_selection.set_end(end_point.clone());
                                         }
                                         //      else if the start x == end x
                                         else if start_point.get_x() == end_point.get_x() {
@@ -397,12 +414,12 @@ impl Component for CodeComponent {
 
 
                                     //          if start y > end y set the cursor on the left of the end point
-                                                if start_point.get_y() > end_point.get_y() {
+                                                if start_point.get_y() > end_point.get_y() && self.current.get_y() > 0{
                                                     end_point.set_y(self.current.get_y());
                                                     self.current.set_y(end_point.get_y() - 1);
                                                 }
                                     //          else if start y < end y set the cursor on the right of the end point
-                                                else if start_point.get_y() < end_point.get_y() {
+                                                else if start_point.get_y() < end_point.get_y() && self.current.get_y() > 0{
                                                     end_point.set_y(self.current.get_y() - 1);
                                                     self.current.set_y(end_point.get_y());
                                                 }
@@ -419,33 +436,8 @@ impl Component for CodeComponent {
                                 //  and shift is not pressed
                                 else {
                                     //move the cursor the left of the selection and then delete the selection
-                                    //if the start x > end x
-                                    if start_point.get_x() > end_point.get_x() {
-                                    //  the cursor goes to the end
                                         self.current.set_x(end_point.get_x());
-                                        self.current.set_y(end_point.get_y());
-                                    }
-                                    //else if start x < end x
-                                    else if start_point.get_x() < end_point.get_x() {
-                                    //  the cursor goes to the start
-                                        self.current.set_x(start_point.get_x());
-                                        self.current.set_y(start_point.get_y());
-                                    }
-                                    //else if start x == end x
-                                    else if start_point.get_x() == end_point.get_x() {
-                                    //  and start y > end y
-                                        if start_point.get_y() > end_point.get_y() {
-                                    //      the cursor goes on the end
-                                            self.current.set_x(end_point.get_x());
-                                            self.current.set_y(end_point.get_y());
-                                        }
-                                    //  and start y < end y
-                                        else if start_point.get_y() < end_point.get_y() {
-                                    //      the cursor goes on the start                 
-                                            self.current.set_x(start_point.get_x());
-                                            self.current.set_y(start_point.get_y());                       
-                                        }
-                                    }
+                                        self.current.set_y(end_point.get_y()-1);
                                     //finally delete the selection
                                     self.selection = None;
                                 }
@@ -493,38 +485,40 @@ impl Component for CodeComponent {
                                 //  and shift is also pressed
                                 if key.modifiers.contains(KeyModifiers::SHIFT) {
                                 //      if the start x != end x change the end of the selection to the current y to the current y + 1 (the end point)
-                                    if start_point.get_x() != end_point.get_x() {
-                                        end_point.set_y(end_point.get_y() + 1);
-                                        mutable_selection.set_end(end_point.clone());
-                                        self.current.set_x(end_point.get_x());
-                                //      then if start x > end x the cursor goes on the left of the end point
-                                        if start_point.get_x() > end_point.get_x() {
-                                            self.current.set_y(end_point.get_y());
+                                if let Some(current_line) = self.current.get_line(end_point.get_x()) {
+                                        if start_point.get_x() != end_point.get_x() && end_point.get_y() < current_line.get_string().len() - 1{
+                                            end_point.set_y(end_point.get_y() + 1);
+                                            mutable_selection.set_end(end_point.clone());
+                                            self.current.set_x(end_point.get_x());
+                                    //      then if start x > end x the cursor goes on the left of the end point
+                                            if start_point.get_x() > end_point.get_x() {
+                                                self.current.set_y(end_point.get_y());
+                                            }
+                                    //      else if the start x < end x the cursor goes on the right of the end point
+                                            else if start_point.get_x() < end_point.get_x() {
+                                                self.current.set_y(end_point.get_y());
+                                            }
                                         }
-                                //      else if the start x < end x the cursor goes on the right of the end point
-                                        else if start_point.get_x() < end_point.get_x() {
-                                            self.current.set_y(end_point.get_y());
-                                        }
-                                    }
-                                //      else if the start x == end x
-                                    else if start_point.get_x() == end_point.get_x() {
-                                //      if start y != end y move the end on the left
-                                        if let Some(current_line) = self.current.get_line(end_point.get_x()) {
-                                            if start_point.get_y() != end_point.get_y() {
-                                                if end_point.get_y() < current_line.get_string().len() - 1 {
-                                                    end_point.set_y(end_point.get_y() + 1);
-                                                    mutable_selection.set_end(end_point.clone());
-                                        //          if start y > end y set the cursor on the left of the end point
-                                                    if start_point.get_y() > end_point.get_y() {
-                                                        self.current.set_y(end_point.get_y() - 1);
+                                    //      else if the start x == end x
+                                        else if start_point.get_x() == end_point.get_x() {
+                                    //      if start y != end y move the end on the left
+                                            if let Some(current_line) = self.current.get_line(end_point.get_x()) {
+                                                if start_point.get_y() != end_point.get_y() {
+                                                    if end_point.get_y() < current_line.get_string().len() - 1 {
+                                                        end_point.set_y(end_point.get_y() + 1);
+                                                        mutable_selection.set_end(end_point.clone());
+                                            //          if start y > end y set the cursor on the left of the end point
+                                                        if start_point.get_y() > end_point.get_y() {
+                                                            self.current.set_y(end_point.get_y() - 1);
+                                                        }
+                                            //          else if start y < end y set the cursor on the right of the end point
+                                                        else if start_point.get_y() < end_point.get_y() {
+                                                            self.current.set_y(end_point.get_y());
+                                                        }
                                                     }
-                                        //          else if start y < end y set the cursor on the right of the end point
-                                                    else if start_point.get_y() < end_point.get_y() {
-                                                        self.current.set_y(end_point.get_y());
-                                                    }
+                                                } else {
+                                                    self.selection = None;
                                                 }
-                                            } else {
-                                                self.selection = None;
                                             }
                                         }
                                     }
@@ -577,7 +571,7 @@ impl Component for CodeComponent {
                             else {
                             //      move the cursor by 1 on his right
                                 if let Some(upper_line) = self.current.get_line(self.current.get_x()) {
-                                    if self.current.get_y() < upper_line.get_string().len() - 1 {
+                                    if self.current.get_y() < upper_line.get_string().len() {
                                         self.current.set_y(self.current.get_y() + 1);
                                         self.selection = None;
                                     }
