@@ -203,8 +203,8 @@ impl Component for CodeComponent {
                                             current_end.set_x(current_end.get_x());
                                             self.current.set_x(current_end.get_x()- 1);
                                         } else {
-                                            self.current.set_y(self.current.get_y());
-                                            current_end.set_y(self.current.get_y()+1);
+                                            self.current.set_y(self.current.get_y()-1);
+                                            current_end.set_y(self.current.get_y());
                                             current_end.set_x(self.current.get_x() - 1);
                                             self.current.set_x(current_end.get_x());
                                         }
@@ -292,17 +292,14 @@ impl Component for CodeComponent {
                                     self.current.set_x(current_end.get_x());
 
                                     if let Some(lower_line) = self.current.get_line(current_end.get_x()) {
-                                        if let Some(current_line) = self.current.get_line(current_end.get_x() - 1) {
-                                            //also moves the cursor to the new end
-                                            if lower_line.get_string().len() < current_line.get_string().len() {
-                                                self.current.set_y(lower_line.get_string().len()-1);
-                                            } else {
-                                                self.current.set_y(current_end.get_y());
-            
-                                            }
-                                            let end_point = Point::new(self.current.get_x(), self.current.get_y());
-                                            selection.set_end(end_point.clone());
+                                        //also moves the cursor to the new end
+                                        if lower_line.get_string().len() < selection.get_end().get_y() {
+                                            self.current.set_y(lower_line.get_string().len()-1);
+                                        } else {
+                                            self.current.set_y(current_end.get_y());
                                         }
+                                        let end_point = Point::new(self.current.get_x(), self.current.get_y());
+                                        selection.set_end(end_point.clone());
                                     }
                                 } else {
                                     let mut end_y = self.current.get_y();
@@ -331,10 +328,13 @@ impl Component for CodeComponent {
                                 let current_x = self.current.get_x();
                                 let current_y = self.current.get_y();
                                 let start_point: Point = Point::new(current_x, current_y);
-                                let end_point: Point;
+                                let mut end_point: Point;
                                 //if a lower line exists set the ending point on the lower line
-                                if let Some(_lower_line) = self.current.get_content().get(self.current.get_x() + 1) {
+                                if let Some(lower_line) = self.current.get_content().get(self.current.get_x() + 1) {
                                     end_point= Point::new(current_x + 1, current_y);
+                                    if lower_line.get_string().len() < current_y {
+                                        end_point.set_y(lower_line.get_string().len()-1);
+                                    }
                                 } else {
                                     //else extend to the end of the current line
                                     let mut end_y = self.current.get_y();

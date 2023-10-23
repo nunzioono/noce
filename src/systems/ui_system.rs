@@ -229,7 +229,6 @@ impl UiSystem {
                     }
                     let not_styled = Span::from(line.get_string()[start_point.get_y()..].to_string());
                     let styled = Span::from(line.get_string()[..start_point.get_y()].to_string());
-                    let not_styled2 = Span::from(line.get_string()[start_point.get_y()..].to_string());
                     vec.push(styled.set_style(selection_style));
                     vec.push(not_styled.set_style(style));
                 } else {
