@@ -194,21 +194,23 @@ impl Component for CodeComponent {
                                 //if the upper line exists moves the selection to the upper line at the same position occupied from cursor on the current line
                                 if self.current.get_x()>0 {
                                     let mut current_end = selection.get_end().clone();
-                                    current_end.set_x(current_end.get_x()- 1);
-                                    //also moves the cursor to the new end
-                                    self.current.set_x(current_end.get_x());
-                                    if let Some(upper_line) = self.current.get_line(current_end.get_x()) {
-                                        if let Some(current_line) = self.current.get_line(current_end.get_x() + 1) {
-                                            if upper_line.get_string().len() < self.current.get_y() {
-                                                current_end.set_y(upper_line.get_string().len());
-                                                self.current.set_y(upper_line.get_string().len());    
-                                            } else {
-                                                current_end.set_y(current_end.get_y());
-                                                self.current.set_y(current_end.get_y()-1);
-                                            }
-                                            selection.set_end(current_end.clone());
+
+                                    if let Some(upper_line) = self.current.get_line(self.current.get_x() - 1) {
+
+                                        if (upper_line.get_string().len() - 1) < self.current.get_y() {
+                                            current_end.set_y(upper_line.get_string().len()-1);
+                                            self.current.set_y(current_end.get_y());    
+                                            current_end.set_x(current_end.get_x());
+                                            self.current.set_x(current_end.get_x()- 1);
+                                        } else {
+                                            self.current.set_y(self.current.get_y());
+                                            current_end.set_y(self.current.get_y()+1);
+                                            current_end.set_x(self.current.get_x() - 1);
+                                            self.current.set_x(current_end.get_x());
                                         }
                                     }
+
+                                    selection.set_end(current_end.clone());
                                 } else {
                                     //else moves the selection to the start of the current line
                                     let mut current_end = selection.get_end().clone();
@@ -233,31 +235,26 @@ impl Component for CodeComponent {
                                 let current_x = self.current.get_x();
                                 let current_y = self.current.get_y();
                                 let start_point: Point = Point::new(current_x, current_y);
-                                let mut end_point: Point;
-                                //if an upper line set the ending point on the upper line
-                                if self.current.get_x() > 0 {
-                                    end_point= Point::new(current_x - 1, current_y);
+                                let end_point: Point;
+                                let upper_len;
+
+                                //if the upper line is shorter than the current set the ending point on the start of the current line
+                                if let Some(upper_line) = self.current.get_line(current_x - 1) {
+                                    upper_len = upper_line.get_string().len();
                                 } else {
-                                    //else extend to the start of the current line
+                                    upper_len = 0;
+                                }
+
+                                if upper_len < current_y {
                                     end_point= Point::new(current_x, 0);
+                                    self.current.set_x(end_point.get_x() - 1);
+                                    self.current.set_y(upper_len - 1);    
+                                } else {
+                                    end_point= Point::new(current_x - 1, current_y);
+                                    self.current.set_y(end_point.get_y());    
                                 }
+
                                 self.selection = Some(CodeSelection::new(start_point, end_point.clone()));
-                                let mut upper_len = end_point.get_y() - 1;
-                                if let Some(upper_line) = self.current.get_line(end_point.clone().get_x()) {
-                                    upper_len = upper_line.get_string().len()-1;
-                                }
-                                self.current.set_x(end_point.get_x());
-                                if upper_len > end_point.get_y() {
-                                    if current_y > 0 {
-                                        self.current.set_y(end_point.get_y()-1);    
-                                    } else {
-                                        self.current.set_y(end_point.get_y());    
-                                    }
-                                } else if upper_len <= end_point.get_y() {
-                                    end_point.set_x(end_point.get_x()+1);
-                                    end_point.set_y(0);
-                                    self.current.set_y(upper_len);
-                                }   
 
                             } else {
                                 //else if shift is not pressed and a selection doesn't exist and an upper line exists just moves the cursor to the upper line

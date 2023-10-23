@@ -183,7 +183,6 @@ impl UiSystem {
                 //selection multiple lines right to left
                 if line_number <= start_point.get_x() && line_number >= end_point.get_x() && start_point.get_x() != end_point.get_x() {
                     //current line is inside the selection or first or last line of the selection
-                    todo!("Fix selection on a single line with the cursor on the upper one");
                     if line_number == end_point.get_x() {
                         //first line
                         let not_styled = Span::from(line.get_string()[..end_point.get_y()].to_string());
@@ -240,7 +239,10 @@ impl UiSystem {
                 }
             } else if focus == Some(&ComponentType::Code) && start_point.get_x() == end_point.get_x() && line_number == start_point.get_x() {
                 //selection on a single line
-                if start_point.get_y() > end_point.get_y() {
+                if (start_point.get_y() == 0 && end_point.get_y() == line.get_string().len() - 1) || (end_point.get_y() == 0 && start_point.get_y() == line.get_string().len() - 1) {
+                    let styled = Span::from(line.get_string());
+                    vec.push(styled.set_style(selection_style));
+                } else if start_point.get_y() > end_point.get_y() {
                     //selection right to left
                     let not_styled_first = Span::from(line.get_string()[..end_point.get_y()].to_string());
                     let styled = Span::from(line.get_string()[end_point.get_y()..start_point.get_y()].to_string());
@@ -256,10 +258,10 @@ impl UiSystem {
                     vec.push(not_styled_first.set_style(style));
                     vec.push(styled.set_style(selection_style));
                     vec.push(not_styled_last.set_style(style));
-                } else {
+                } else if start_point.get_y() == end_point.get_y() {
                     //selection empty
                     let not_styled = Span::from(line.get_string());
-                    vec.push(not_styled.set_style(style));
+                    vec.push(not_styled.set_style(style));    
                 }
             } else if focus == Some(&ComponentType::Code) {
                 //focused with selection empty
