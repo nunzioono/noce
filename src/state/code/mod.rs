@@ -393,14 +393,18 @@ impl Component for CodeComponent {
                                         //      if the start x != end x change the end of the selection to the current y to the current y - 1 (the end point)
                                         if start_point.get_x() != end_point.get_x() {
                                         //      then if start x > end x the cursor goes on the left of the end point
-                                            if start_point.get_x() > end_point.get_x() && end_point.get_y() > 0{
+                                            if start_point.get_x() > end_point.get_x() && self.current.get_y() > 1{
                                                 self.current.set_x(end_point.get_x());    
-                                                end_point.set_y(end_point.get_y()-1);
-                                                self.current.set_y(end_point.get_y()-1);
+                                                end_point.set_y(end_point.get_y());
+                                                self.current.set_y(end_point.get_y()-2);
                                             }
                                         //      else if the start x < end x the cursor goes on the right of the end point
-                                            else if start_point.get_x() < end_point.get_x() {
-                                                self.current.set_y(end_point.get_y() + 1);
+                                            else if start_point.get_x() < end_point.get_x() && self.current.get_y() > 0 {
+                                                self.current.set_y(end_point.get_y()-1);
+                                                if let Some(upper_line) = self.current.get_line(end_point.get_x() - 1) {
+                                                    end_point.set_x(end_point.get_x() - 1);
+                                                    end_point.set_y(upper_line.get_string().len()-1);
+                                                }
                                             }
 
                                             mutable_selection.set_end(end_point.clone());
