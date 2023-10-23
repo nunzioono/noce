@@ -203,8 +203,8 @@ impl Component for CodeComponent {
                                             current_end.set_x(current_end.get_x());
                                             self.current.set_x(current_end.get_x()- 1);
                                         } else {
-                                            self.current.set_y(self.current.get_y()-1);
-                                            current_end.set_y(self.current.get_y());
+                                            self.current.set_y(self.current.get_y());
+                                            current_end.set_y(self.current.get_y()+1);
                                             current_end.set_x(self.current.get_x() - 1);
                                             self.current.set_x(current_end.get_x());
                                         }
@@ -250,8 +250,9 @@ impl Component for CodeComponent {
                                     self.current.set_x(end_point.get_x() - 1);
                                     self.current.set_y(upper_len - 1);    
                                 } else {
-                                    end_point= Point::new(current_x - 1, current_y);
-                                    self.current.set_y(end_point.get_y());    
+                                    end_point= Point::new(current_x - 1, current_y+1);
+                                    self.current.set_x(end_point.get_x());
+                                    self.current.set_y(end_point.get_y()-1);    
                                 }
 
                                 self.selection = Some(CodeSelection::new(start_point, end_point.clone()));
