@@ -1,30 +1,5 @@
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct Point {
-    x: usize,
-    y: usize
-}
 
-impl Point {
-    pub fn new(x: usize, y: usize) -> Point {
-        Point { x: x, y: y }
-    }
-
-    pub fn get_x(&self) -> usize {
-        self.x
-    }
-
-    pub fn get_y(&self) -> usize {
-        self.y
-    } 
-
-    pub fn set_x(&mut self, x: usize) {
-        self.x = x;
-    }
-
-    pub fn set_y(&mut self, y: usize) {
-        self.y = y;
-    }
-}
+use crate::state::code::code_utils::Point;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct CodeSelection {

@@ -1,6 +1,6 @@
 use super::code::{Line, Code};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Change {
     number: usize,
     from: String,
@@ -57,7 +57,7 @@ impl Change {
 
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CodeHistory {
     initial: Code,
     changes: Vec<Change>,

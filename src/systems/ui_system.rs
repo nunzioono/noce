@@ -2,7 +2,7 @@ use std::{error::Error, path::MAIN_SEPARATOR};
 
 use ratatui::{Terminal, prelude::{Backend, Rect, Alignment, Layout, Direction, Constraint}, Frame, style::{Style, Stylize, Styled}, widgets::{Paragraph, Block, BorderType, Borders, ListItem, List, ListState, Clear}, text::{Line, Span}};
 
-use crate::state::{App, AppContext, ComponentType, code::code_selection::Point};
+use crate::state::{App, AppContext, ComponentType, code::code_utils::Point};
 
 use super::System;
 
@@ -130,7 +130,7 @@ impl UiSystem {
         .get_content();
 
         //Retrieve if something is selected the starting and ending point of the selection
-        let selection = app.get_code().get_selection();
+        let selection = app.get_code().get_current().get_selection();
         let mut start_point: Point = Point::new(0,0);
         let mut end_point: Point = Point::new(0,0);
         if let Some(selection) = selection {
@@ -283,7 +283,7 @@ impl UiSystem {
 
         let list_numbers = List::new(numbers);
 
-        let mut state = ListState::default().with_selected(Some(app.get_code().get_current().get_x()));
+        let mut state = ListState::default().with_selected(Some(app.get_code().get_current().get_cursor().get_x()));
         
         frame.render_widget(block, code_area);
         frame.render_stateful_widget(list_numbers, layout_code.get(0).unwrap().clone(), &mut state);

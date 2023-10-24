@@ -1,5 +1,7 @@
 use std::{fmt::{self}, ops::Add};
 
+use super::{code_utils::Point, code_selection::CodeSelection};
+
 
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
@@ -34,8 +36,8 @@ impl Line {
 pub struct Code {
     content: Vec<Line>,
     cursor_displayed: bool,
-    x: usize,
-    y: usize
+    cursor: Point,
+    selection: Option<CodeSelection>,
 }
 
 impl fmt::Display for Code {
@@ -58,7 +60,15 @@ impl Add<Line> for Code {
 
 impl Code {
     pub fn new() -> Code {
-        Code { content: vec![], cursor_displayed: false, x: 0, y: 0 }
+        Code { content: vec![], cursor_displayed: false, cursor: Point::default(), selection: None }
+    }
+
+    pub fn get_cursor(&self) -> &Point {
+        &self.cursor
+    }
+
+    pub fn get_mut_cursor(&mut self) -> &mut Point {
+        &mut self.cursor
     }
 
     pub fn flush(&mut self) {
@@ -68,31 +78,13 @@ impl Code {
     pub fn is_cursor_displayed(&self) -> bool {
         self.cursor_displayed
     }
-
-    pub fn get_x(&self) -> usize {
-        self.x
-    } 
-
-    pub fn get_y(&self) -> usize {
-        self.y
-    } 
-
-    pub fn set_x(&mut self, x: usize) -> &mut Self {
-        self.x = x;
-        self
-    } 
-
-    pub fn set_y(&mut self, y: usize) -> &mut Self {
-        self.y = y;
-        self
-    } 
     
     pub fn remove_line(&mut self, number: usize) {
         self.content.retain(|line| line.number != number);
     }
 
     pub fn remove_line_at_cursor(&mut self) {
-        self.content.retain(|line| line.number != self.x);
+        self.content.retain(|line| line.number != self.cursor.get_x());
     }
 
     pub fn replace_line(&mut self, number: usize, from: &String, to: &String) {
@@ -112,7 +104,7 @@ impl Code {
 
     pub fn change_line_at_cursor(&mut self, new_value: String) {
         for line in &mut self.content {
-            if line.number == self.x {
+            if line.number == self.cursor.get_x() {
                 line.line = new_value;
                 break;
             }
@@ -139,9 +131,9 @@ impl Code {
 
     pub fn set_cursor(&mut self) {
         if !self.cursor_displayed {
-            if let Some(line) = self.content.get(self.get_x()) {
+            if let Some(line) = self.content.get(self.cursor.get_x()) {
                 let mut line_with_cursor = line.get_string().clone();
-                line_with_cursor.insert(self.get_y(), '|');
+                line_with_cursor.insert(self.cursor.get_y(), '|');
                 self.change_line_at_cursor(line_with_cursor);
                 self.cursor_displayed = true;
             }
@@ -150,15 +142,41 @@ impl Code {
 
     pub fn remove_cursor(&mut self) {
         if self.cursor_displayed {
-            if let Some(line) = self.content.get(self.get_x()) {
+            if let Some(line) = self.content.get(self.cursor.get_x()) {
                 let mut line_without_cursor = line.get_string().clone();
                 if line_without_cursor.len() > 0 {
-                    line_without_cursor.remove(self.get_y());
+                    line_without_cursor.remove(self.cursor.get_y());
                     self.change_line_at_cursor(line_without_cursor);
                     self.cursor_displayed = false;
                 }
             }
         }
+    }
+
+    
+
+    pub fn flush_selection(&mut self) {
+        self.selection = None;
+    }
+
+    pub fn set_selection_start(&mut self, start: Point) {
+        if let Some(selection) = &mut self.selection {
+            selection.set_start(start);
+        }
+    }
+
+    pub fn set_selection_end(&mut self, end: Point) {
+        if let Some(selection) = &mut self.selection {
+            selection.set_end(end);
+        }
+    }
+
+    pub fn create_selection(&mut self, start: Point, end: Point) {
+        self.selection = Some(CodeSelection::new(start, end));
+    }
+
+    pub fn get_selection(&self) -> &Option<CodeSelection> {
+        &self.selection
     }
 
 }
