@@ -584,41 +584,50 @@ pub fn handle_char(code_component: &mut CodeComponent, char: String) {
 }
 
 pub fn handle_delete(code_component: &mut CodeComponent) {
-    let last_number = code_component.current.get_content().into_iter().map(|x| x.get_number()).fold(0, |line1, line2| {
-        if line1 > line2 { line1 } else { line2 }
-    });
-    let last_line = code_component.current.get_line(last_number).unwrap();
-    code_component.current.change_line(last_line.get_number(), last_line.get_string()[..last_line.get_string().len()-1].to_string());
+    let readable_code = code_component.get_current().clone();
+    let mutable_code = code_component.get_mut_current();
+    let readable_cursor = readable_code.get_cursor().clone();
+    let mut upper_size = 0;
+
+    if readable_cursor.get_x() > 0 {
+        if let Some(upper_line) = readable_code.get_line(readable_cursor.get_x() - 1) {
+            upper_size = upper_line.get_string().len();
+        }
+    }
+    if let Some(current_line) = readable_code.get_line(readable_cursor.get_x()).clone() {
+        let line = current_line.get_string().clone();
+        if readable_cursor.get_y() == 0 && readable_cursor.get_x() > 0 {
+            mutable_code.get_mut_cursor().move_left(true, upper_size);
+            mutable_code.change_line(readable_cursor.get_x()-1, line);
+            mutable_code.remove_line(readable_cursor.get_x());
+            for i in readable_cursor.get_x()..readable_code.get_content().len() {
+                mutable_code.set_line_number(i);
+            }    
+        } else if readable_cursor.get_y() > 0 {
+            let mut new_string = line[..readable_cursor.get_y()-1].to_string();
+            new_string.push_str(&line[readable_cursor.get_y()..]);
+            mutable_code.replace_line(current_line.get_number(), line, new_string.clone());
+            mutable_code.get_mut_cursor().move_left(false, new_string.len());
+        }
+    }    
 }
 
 pub fn handle_enter(code_component: &mut CodeComponent) {
-    {
-        let mut_code = code_component.get_mut_current();
-        mut_code.remove_cursor();    
-    }
     let code = code_component.get_current().clone();
     let mut_code = code_component.get_mut_current();
+
     if let Some(current_line) = code.get_content().get(code.get_cursor().get_x()) {
-        let line_number = current_line.get_number().clone();
         let new_current_string = current_line.get_string()[..code.get_cursor().get_y()].to_string().clone();
         let new_generated_string = current_line.get_string()[code.get_cursor().get_y()..].to_string().clone();
-        mut_code.flush();
-        for number in 0 .. line_number {
-            if let Some(line) = code.get_line(number) {
-                mut_code.add_line(line.clone());                                    
+        
+        mut_code.replace_line(code.get_cursor().get_x(),current_line.get_string(), new_current_string.clone());
+        mut_code.get_mut_cursor().move_right(true, current_line.get_string().len() - new_current_string.len());
+        mut_code.get_mut_content().insert(code.get_cursor().get_x()+1, Line::new(code.get_cursor().get_x()+1, new_generated_string));
+        for number in current_line.get_number()+1.. code.get_content().len() {
+            if let Some(line) = mut_code.get_mut_content().get_mut(number) {
+                line.set_number(number + 1);
             }
         }
-        mut_code.add_line(Line::new(current_line.get_number(), new_current_string));
-        mut_code.get_mut_cursor().set_x(code.get_cursor().get_x());
-        mut_code.get_mut_cursor().set_y(code.get_cursor().get_y());
-        mut_code.add_line(Line::new(current_line.get_number() + 1, new_generated_string));
-        for number in current_line.get_number() + 1.. code.get_content().len() {
-            if let Some(line) = code.get_line(number) {
-                let mut new_line = line.clone();
-                new_line.set_number(number + 1);
-                mut_code.add_line(new_line.clone());                                    
-            }
-        }
-        mut_code.set_cursor();
     }
+
 }

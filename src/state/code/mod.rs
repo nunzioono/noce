@@ -24,6 +24,7 @@ impl Component for CodeComponent {
     fn handle_event(&mut self, context: &mut AppContext, event: Event) {
 
         if let Event::Key(key) = event {
+            self.get_mut_current().remove_cursor();
             if key.kind == KeyEventKind::Press {
                 match key.code {
                     KeyCode::Char(char) => {
@@ -42,34 +43,26 @@ impl Component for CodeComponent {
                         } else if char_normalized == "y" && key.modifiers.contains(KeyModifiers::CONTROL) {
                             handle_redo(self);
                         } else {
-                            handle_char(self, char_normalized);
+                            handle_char(self, char.to_string());
                         }
                     },
-                    KeyCode::Delete => {
+                    KeyCode::Backspace => {
                         handle_delete(self);
                     },
                     KeyCode::Enter => {
                         handle_enter(self);
                     },
                     KeyCode::Up => {
-                        self.get_mut_current().remove_cursor();
                         handle_up(self, event.clone());
-                        self.get_mut_current().set_cursor();
                     },
                     KeyCode::Down => {
-                        self.get_mut_current().remove_cursor();
                         handle_down(self, event.clone());
-                        self.get_mut_current().set_cursor();
                     },
                     KeyCode::Left => {
-                        self.get_mut_current().remove_cursor();
                         handle_left(self, event.clone());
-                        self.get_mut_current().set_cursor();
                     },
                     KeyCode::Right => {
-                        self.get_mut_current().remove_cursor();
                         handle_right(self, event.clone());
-                        self.get_mut_current().set_cursor();
                     },
                     KeyCode::Esc => {
                         context.set_focus(None);
@@ -80,11 +73,9 @@ impl Component for CodeComponent {
             } if key.kind == KeyEventKind::Repeat {
                 match key.code {
                     KeyCode::Char(char) => {
-                        let mut char_normalized = char.clone().to_string();
-                        char_normalized = char_normalized.to_lowercase().to_string();    
-                        handle_char(self, char_normalized)
+                        handle_char(self, char.to_string())
                     },
-                    KeyCode::Delete => {
+                    KeyCode::Backspace => {
                         handle_delete(self);
                     },
                     KeyCode::Enter => {
@@ -109,6 +100,8 @@ impl Component for CodeComponent {
                 }
             }
         }
+        self.get_mut_current().set_cursor();
+
     }
 }
 

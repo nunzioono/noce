@@ -80,26 +80,27 @@ impl Code {
     }
     
     pub fn remove_line(&mut self, number: usize) {
-        self.content.retain(|line| line.number != number);
+        self.get_mut_content().remove(number);
     }
 
     pub fn remove_line_at_cursor(&mut self) {
         self.content.retain(|line| line.number != self.cursor.get_x());
     }
 
-    pub fn replace_line(&mut self, number: usize, from: &String, to: &String) {
-        if let Some(line) = self.content.get_mut(number) {
-            line.set_string(line.get_string().replace(from, to));
+    pub fn replace_line(&mut self, number: usize, from: String, to: String) {
+        if let Some(line) = self.get_mut_content().get_mut(number) {
+            let replaced_string = line.get_string().replace(from.as_str(), to.as_str());
+            line.set_string(replaced_string.clone());
         }
     }
 
     pub fn change_line(&mut self, number: usize, new_value: String) {
-        for line in &mut self.content {
-            if line.number == number {
-                line.line = new_value;
-                break;
-            }
+        if let Some(line) = self.content.get_mut(number) {
+            let mut new_string = line.clone().get_string();
+            new_string.push_str(new_value.as_str());    
+            line.set_string(new_string);
         }
+        
     }
 
     pub fn change_line_at_cursor(&mut self, new_value: String) {
@@ -121,8 +122,9 @@ impl Code {
     }
 
     pub fn set_line_number(&mut self, number: usize) {
-        let line = self.content.remove(number);
-        self.content.insert(number + 1, line.clone())
+        if let Some(mutable_line) = self.get_mut_content().get_mut(number) {
+            mutable_line.set_number(mutable_line.get_number() - 1);
+        }
     }
 
     pub fn get_content(&self) -> &Vec<Line> {
@@ -179,4 +181,7 @@ impl Code {
         &self.selection
     }
 
+    pub fn get_mut_content(&mut self) -> &mut Vec<Line> {
+        &mut self.content
+    }
 }
