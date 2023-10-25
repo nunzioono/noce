@@ -123,13 +123,19 @@ pub fn handle_up(code_component: &mut CodeComponent, event: Event) {
 
         } else if is_selecting && !is_shift {
 
-            if readable_cursor.get_x() > 0 {
-                mutable_code.flush_selection();
-                mutable_code.get_mut_cursor().move_up(false, upper_size);
+            
+            let end = readable_selection.get_end();
+            let start = readable_selection.get_start();
+
+            if start.get_x() > end.get_x() {
+                mutable_code.get_mut_cursor().set_x(end.get_x());
+                mutable_code.get_mut_cursor().set_y(end.get_y());    
             } else {
-                mutable_code.flush_selection();
-                mutable_code.get_mut_cursor().move_up(true, upper_size);
+                mutable_code.get_mut_cursor().set_x(start.get_x());
+                mutable_code.get_mut_cursor().set_y(start.get_y());    
             }
+            mutable_code.flush_selection();
+            
 
         } else if !is_selecting && is_shift {
 
@@ -196,18 +202,18 @@ pub fn handle_down(code_component: &mut CodeComponent, event: Event) {
 
         if is_selecting && is_shift {
 
-            if readable_cursor.get_x() > 0 {
+            if readable_cursor.get_x() < nlines - 1 {
                 current_selection_end.move_down(false, current_size, lower_size);
                 mutable_code.get_mut_cursor().move_down(false, current_size, lower_size);
                 let current_selection_start = readable_selection.get_start().clone();
-                if current_selection_start == current_selection_end {
+                if current_selection_start.get_x() == current_selection_end.get_x() && current_selection_start.get_y().abs_diff(current_selection_end.get_y()) <= 1 {
                     mutable_code.flush_selection();
                 } else {
                     mutable_code.set_selection_end(current_selection_end);
                 }
             } else {
-                current_selection_end.move_right(true, lower_size);
-                mutable_code.get_mut_cursor().move_right(true, lower_size);
+                current_selection_end.move_down(true, current_size, lower_size);
+                mutable_code.get_mut_cursor().move_down(true, current_size, lower_size);
                 mutable_code.set_selection_end(current_selection_end);
             }
 
@@ -215,17 +221,21 @@ pub fn handle_down(code_component: &mut CodeComponent, event: Event) {
 
         } else if is_selecting && !is_shift {
 
-            if readable_cursor.get_x() > 0 {
-                mutable_code.flush_selection();
-                mutable_code.get_mut_cursor().move_down(false, current_size, lower_size);
+            let end = readable_selection.get_end();
+            let start = readable_selection.get_start();
+
+            if start.get_x() < end.get_x() {
+                mutable_code.get_mut_cursor().set_x(end.get_x());
+                mutable_code.get_mut_cursor().set_y(end.get_y());    
             } else {
-                mutable_code.flush_selection();
-                mutable_code.get_mut_cursor().move_down(true, current_size, lower_size);
+                mutable_code.get_mut_cursor().set_x(start.get_x());
+                mutable_code.get_mut_cursor().set_y(start.get_y());    
             }
+            mutable_code.flush_selection();
 
         } else if !is_selecting && is_shift {
 
-            if readable_cursor.get_x() > 0 {
+            if readable_cursor.get_x() < nlines - 1 {
                 current_selection_end = readable_cursor.clone();
                 current_selection_end.move_down(false, current_size, lower_size);
                 mutable_code.create_selection(readable_cursor, current_selection_end.clone());
@@ -258,10 +268,15 @@ pub fn handle_left(code_component: &mut CodeComponent, event: Event) {
     let mut readable_selection = CodeSelection::default();
     let mut is_shift = false;
     let mut upper_size = 0;
+    let mut current_size = 0;
 
     if let Some(selection) = readable_current_code.get_selection() {
         is_selecting = true;
         readable_selection = selection.clone();
+    }
+
+    if let Some(current) = readable_current_code.get_line(readable_cursor.get_x()) {
+        current_size = current.get_string().len();
     }
 
     if readable_current_code.get_cursor().get_x() > 0 {
@@ -281,9 +296,11 @@ pub fn handle_left(code_component: &mut CodeComponent, event: Event) {
 
         if is_selecting && is_shift {
 
-            if readable_cursor.get_y() > 0 {
-                current_selection_end.move_left(false, upper_size);
+            if readable_cursor.get_x() == 0 {
                 mutable_code.get_mut_cursor().move_left(false, upper_size);
+                if current_selection_end.get_y() > 1 {
+                    current_selection_end.move_left(false, upper_size);
+                }
                 let current_selection_start = readable_selection.get_start().clone();
                 if current_selection_start == current_selection_end {
                     mutable_code.flush_selection();
@@ -299,27 +316,33 @@ pub fn handle_left(code_component: &mut CodeComponent, event: Event) {
 
         } else if is_selecting && !is_shift {
 
-            if readable_cursor.get_y() > 0 {
-                mutable_code.flush_selection();
-                mutable_code.get_mut_cursor().move_left(false, upper_size);
-            } else {
-                mutable_code.flush_selection();
-                mutable_code.get_mut_cursor().move_left(true, upper_size);
+            let end = readable_selection.get_end();
+            let start = readable_selection.get_start();
+
+            if start.get_x() > end.get_x() {
+                mutable_code.get_mut_cursor().set_x(end.get_x());
+                mutable_code.get_mut_cursor().set_y(end.get_y()-1);    
+            } else if start.get_x() < end.get_x() {
+                mutable_code.get_mut_cursor().set_x(start.get_x());
+                mutable_code.get_mut_cursor().set_y(start.get_y());    
+            } else if start.get_x() == end.get_x() {
+                if start.get_y() < end.get_y() {
+                    mutable_code.get_mut_cursor().set_x(start.get_x());
+                    mutable_code.get_mut_cursor().set_y(start.get_y());
+                } else if start.get_y() > end.get_y() {
+                    mutable_code.get_mut_cursor().set_x(end.get_x());
+                    mutable_code.get_mut_cursor().set_y(end.get_y()-1);
+                }
             }
+            mutable_code.flush_selection();
 
         } else if !is_selecting && is_shift {
 
-            if readable_cursor.get_y() > 0 {
-                current_selection_end = readable_cursor.clone();
-                current_selection_end.move_left(false, upper_size);
-                mutable_code.create_selection(readable_cursor, current_selection_end.clone());
-                mutable_code.get_mut_cursor().move_left(false, upper_size);
-            } else {
-                current_selection_end = readable_cursor.clone();
-                current_selection_end.move_left(true, upper_size);
-                mutable_code.create_selection(readable_cursor, current_selection_end.clone());
-                mutable_code.get_mut_cursor().move_left(true, upper_size);
-            }
+            let mut current_selection_start = readable_cursor.clone();
+            current_selection_start.move_right(false, current_size);
+            current_selection_end = readable_cursor.clone();
+            mutable_code.create_selection(current_selection_start, current_selection_end.clone());
+            mutable_code.get_mut_cursor().move_left(false, upper_size); 
 
         } else if !is_selecting && !is_shift {
 
@@ -380,13 +403,25 @@ pub fn handle_right(code_component: &mut CodeComponent, event: Event) {
 
         } else if is_selecting && !is_shift {
 
-            if readable_cursor.get_x() > 0 {
-                mutable_code.flush_selection();
-                mutable_code.get_mut_cursor().move_right(false, current_size);
-            } else {
-                mutable_code.flush_selection();
-                mutable_code.get_mut_cursor().move_right(true, current_size);
+            let end = readable_selection.get_end();
+            let start = readable_selection.get_start();
+
+            if start.get_x() < end.get_x() {
+                mutable_code.get_mut_cursor().set_x(end.get_x());
+                mutable_code.get_mut_cursor().set_y(end.get_y());    
+            } else if start.get_x() > end.get_x() {
+                mutable_code.get_mut_cursor().set_x(start.get_x());
+                mutable_code.get_mut_cursor().set_y(start.get_y());    
+            } else if start.get_x() == end.get_x() {
+                if start.get_y() > end.get_y() {
+                    mutable_code.get_mut_cursor().set_x(start.get_x());
+                    mutable_code.get_mut_cursor().set_y(start.get_y());
+                } else if start.get_y() < end.get_y() {
+                    mutable_code.get_mut_cursor().set_x(end.get_x());
+                    mutable_code.get_mut_cursor().set_y(end.get_y());
+                }
             }
+            mutable_code.flush_selection();
 
         } else if !is_selecting && is_shift {
 
