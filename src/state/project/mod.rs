@@ -100,7 +100,7 @@ impl Component for ProjectComponent {
                             if self.get_hover() > &0 {
                                 self.set_hover(self.get_hover() - 1);
                             } else {
-                                self.set_hover(0);
+                                self.set_hover(self.contents.len()-1);
                             }    
                         }
                     },
@@ -109,18 +109,18 @@ impl Component for ProjectComponent {
                             if self.get_hover() < &(self.contents.len() - 1){
                                 self.set_hover(self.get_hover() + 1);
                             } else {
-                                self.set_hover(self.contents.len() - 1);
+                                self.set_hover(0);
                             }    
                         }
                     },
                     KeyCode::Enter => {
                         if !self.popup {
-                                                    if !self.edit {
+                        if !self.edit {
                             self.set_focus(self.get_hover().clone());
 
                             if let Some(focus) = self.get_focus() {
                                 let selected_item = self.contents[focus.clone()].clone();
-    
+
                                 if selected_item.is_dir() {
                                     context.set_active_folder(selected_item.clone());
                                     self.update_contents(&selected_item)

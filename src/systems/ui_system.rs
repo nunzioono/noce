@@ -131,8 +131,9 @@ impl UiSystem {
 
         //Retrieve if something is selected the starting and ending point of the selection
         let selection = app.get_code().get_current().get_selection();
-        let mut start_point: Point = Point::new(0,0);
-        let mut end_point: Point = Point::new(0,0);
+        let is_selecting = selection.is_some();
+        let mut start_point: Point = Point::default();
+        let mut end_point: Point = Point::default();
         if let Some(selection) = selection {
             start_point = selection.get_start().clone();
             end_point = selection.get_end().clone();
@@ -154,7 +155,7 @@ impl UiSystem {
             if focus != Some(&ComponentType::Code) || context.focus().is_none() {
                 //not focused code
                 vec.push(Span::from(line.get_string()));
-            } else if focus == Some(&ComponentType::Code) && start_point.get_x() < end_point.get_x() {
+            } else if focus == Some(&ComponentType::Code) && is_selecting && start_point.get_x() < end_point.get_x() {
                 //selection multiple lines left to right
                 if line_number >= start_point.get_x() && line_number <= end_point.get_x() {
                     //current line is inside the selection or first or last line of the selection
@@ -179,7 +180,7 @@ impl UiSystem {
                     let not_styled = Span::from(line.get_string());
                     vec.push(not_styled.set_style(style));
                 }
-            } else if focus == Some(&ComponentType::Code) && start_point.get_x() > end_point.get_x() {
+            } else if focus == Some(&ComponentType::Code) && is_selecting && start_point.get_x() > end_point.get_x() {
                 //selection multiple lines right to left
                 if line_number <= start_point.get_x() && line_number >= end_point.get_x() && start_point.get_x() != end_point.get_x() {
                     //current line is inside the selection or first or last line of the selection
@@ -236,7 +237,7 @@ impl UiSystem {
                     let not_styled = Span::from(line.get_string());
                     vec.push(not_styled.set_style(style));
                 }
-            } else if focus == Some(&ComponentType::Code) && start_point.get_x() == end_point.get_x() && line_number == start_point.get_x() {
+            } else if focus == Some(&ComponentType::Code) && is_selecting && start_point.get_x() == end_point.get_x() && line_number == start_point.get_x() {
                 //selection on a single line
                 if (start_point.get_y() == 0 && end_point.get_y() == line.get_string().len() - 1) || (end_point.get_y() == 0 && start_point.get_y() == line.get_string().len() - 1) {
                     let styled = Span::from(line.get_string());

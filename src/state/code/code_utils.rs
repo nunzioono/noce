@@ -1,4 +1,4 @@
-use std::{error::Error, fs::{OpenOptions, File}, io::Write};
+use std::{error::Error, fs::{OpenOptions, File}, io::Write, cmp::{min, max}};
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{Event, KeyModifiers};
@@ -10,6 +10,46 @@ use super::{CodeComponent, code_selection::CodeSelection, code::Line};
 pub struct Point {
     x: usize,
     y: usize
+}
+
+impl PartialOrd for Point {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.get_x() < other.get_x() {
+            Some(std::cmp::Ordering::Less)
+        } else if self.get_x() > other.get_x() {
+            Some(std::cmp::Ordering::Greater)
+        } else if self.get_x() == other.get_x() {
+            if self.get_y() == other.get_y() {
+                Some(std::cmp::Ordering::Equal)
+            } else if self.get_y() < other.get_y() {
+                Some(std::cmp::Ordering::Less)
+            } else if self.get_y() > other.get_y() {
+                Some(std::cmp::Ordering::Greater)
+            } else { 
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
+impl Ord for Point {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self.get_x() < other.get_x() {
+            std::cmp::Ordering::Less
+        } else if self.get_x() > other.get_x() {
+            std::cmp::Ordering::Greater
+        } else {
+            if self.get_y() < other.get_y() {
+                std::cmp::Ordering::Less
+            } else if self.get_y() > other.get_y() {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            } 
+        }
+    }
 }
 
 impl Point {
@@ -585,31 +625,69 @@ pub fn handle_char(code_component: &mut CodeComponent, char: String) {
 
 pub fn handle_delete(code_component: &mut CodeComponent) {
     let readable_code = code_component.get_current().clone();
-    let mutable_code = code_component.get_mut_current();
+    let readable_selection = readable_code.get_selection();
     let readable_cursor = readable_code.get_cursor().clone();
     let mut upper_size = 0;
+    let mutable_code = code_component.get_mut_current();    
 
-    if readable_cursor.get_x() > 0 {
-        if let Some(upper_line) = readable_code.get_line(readable_cursor.get_x() - 1) {
-            upper_size = upper_line.get_string().len();
+    if let Some(readable_selection) = readable_selection {
+        
+        mutable_code.delete_selection();
+
+        if readable_selection.get_start().get_x() > readable_selection.get_end().get_x() {
+            mutable_code.get_mut_cursor().set_x(readable_selection.get_end().get_x());
+            mutable_code.get_mut_cursor().set_y(readable_selection.get_end().get_y()-1);    
+        } else if readable_selection.get_start().get_x() < readable_selection.get_end().get_x() {
+            mutable_code.get_mut_cursor().set_x(readable_selection.get_start().get_x());
+            mutable_code.get_mut_cursor().set_y(readable_selection.get_start().get_y());    
+        } else if readable_selection.get_start().get_x() == readable_selection.get_end().get_x() {
+            if readable_selection.get_start().get_y() < readable_selection.get_end().get_y() {
+                mutable_code.get_mut_cursor().set_x(readable_selection.get_start().get_x());
+                mutable_code.get_mut_cursor().set_y(readable_selection.get_start().get_y());
+            } else if readable_selection.get_start().get_y() > readable_selection.get_end().get_y() {
+                mutable_code.get_mut_cursor().set_x(readable_selection.get_end().get_x());
+                mutable_code.get_mut_cursor().set_y(readable_selection.get_end().get_y()-1);
+            }
         }
+
+        mutable_code.flush_selection();
+
+
+        let start = min(readable_selection.get_start(),readable_selection.get_end());
+        let end = max(readable_selection.get_start(),readable_selection.get_end());
+
+        for i in start.get_x()..mutable_code.get_content().len() {
+            if let Some(line) = mutable_code.get_mut_content().get_mut(i) {
+                println!("Moving line number {} to number {}+{}+1-{}", line.get_number(), i, start.get_x(), end.get_x());
+                line.set_number(line.get_number()+start.get_x()+1-end.get_x());
+            }
+        }
+    } else {
+
+        if readable_cursor.get_x() > 0 {
+            if let Some(upper_line) = readable_code.get_line(readable_cursor.get_x() - 1) {
+                upper_size = upper_line.get_string().len();
+            }
+        }
+        if let Some(current_line) = readable_code.get_line(readable_cursor.get_x()).clone() {
+            let line = current_line.get_string().clone();
+            if readable_cursor.get_y() == 0 && readable_cursor.get_x() > 0 {
+                mutable_code.get_mut_cursor().move_left(true, upper_size);
+                mutable_code.change_line(readable_cursor.get_x()-1, line);
+                mutable_code.remove_line(readable_cursor.get_x());
+                for i in readable_cursor.get_x()..readable_code.get_content().len() {
+                    mutable_code.set_line_number(i,i-1);
+                }    
+            } else if readable_cursor.get_y() > 0 {
+                let mut new_string = line[..readable_cursor.get_y()-1].to_string();
+                new_string.push_str(&line[readable_cursor.get_y()..]);
+                mutable_code.replace_line(current_line.get_number(), line, new_string.clone());
+                mutable_code.get_mut_cursor().move_left(false, new_string.len());
+            }
+        }    
+    
+
     }
-    if let Some(current_line) = readable_code.get_line(readable_cursor.get_x()).clone() {
-        let line = current_line.get_string().clone();
-        if readable_cursor.get_y() == 0 && readable_cursor.get_x() > 0 {
-            mutable_code.get_mut_cursor().move_left(true, upper_size);
-            mutable_code.change_line(readable_cursor.get_x()-1, line);
-            mutable_code.remove_line(readable_cursor.get_x());
-            for i in readable_cursor.get_x()..readable_code.get_content().len() {
-                mutable_code.set_line_number(i);
-            }    
-        } else if readable_cursor.get_y() > 0 {
-            let mut new_string = line[..readable_cursor.get_y()-1].to_string();
-            new_string.push_str(&line[readable_cursor.get_y()..]);
-            mutable_code.replace_line(current_line.get_number(), line, new_string.clone());
-            mutable_code.get_mut_cursor().move_left(false, new_string.len());
-        }
-    }    
 }
 
 pub fn handle_enter(code_component: &mut CodeComponent) {

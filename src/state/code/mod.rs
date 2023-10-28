@@ -99,8 +99,8 @@ impl Component for CodeComponent {
                     _ => {}
                 }
             }
+            self.get_mut_current().set_cursor();
         }
-        self.get_mut_current().set_cursor();
 
     }
 }

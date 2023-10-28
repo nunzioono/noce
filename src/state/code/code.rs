@@ -1,4 +1,4 @@
-use std::{fmt::{self}, ops::Add};
+use std::{fmt::{self}, ops::Add, cmp::{min, max}};
 
 use super::{code_utils::Point, code_selection::CodeSelection};
 
@@ -121,9 +121,9 @@ impl Code {
         self.content.iter().find(|line| line.number == number)
     }
 
-    pub fn set_line_number(&mut self, number: usize) {
-        if let Some(mutable_line) = self.get_mut_content().get_mut(number) {
-            mutable_line.set_number(mutable_line.get_number() - 1);
+    pub fn set_line_number(&mut self, old_number: usize, new_number: usize) {
+        if let Some(mutable_line) = self.get_mut_content().get_mut(old_number) {
+            mutable_line.set_number(new_number);
         }
     }
 
@@ -183,5 +183,67 @@ impl Code {
 
     pub fn get_mut_content(&mut self) -> &mut Vec<Line> {
         &mut self.content
+    }
+
+    pub fn delete_selection(&mut self) {
+        let readable_selection = self.get_selection().clone();
+        let readable_code = self.get_content().clone();
+
+        if let Some(readable_selection) = readable_selection {
+
+            if readable_selection.get_start().get_x() != readable_selection.get_end().get_x() {
+
+                let start = min(readable_selection.get_start(),readable_selection.get_end());
+                let end = max(readable_selection.get_end(),readable_selection.get_start());
+                let mut is_unordered = false;
+
+                for i in start.get_x()..end.get_x()+1 {
+                    let line = readable_code.get(i);
+                    
+                    if let Some(line) = line {
+                        if i == start.get_x() {
+                            let new_value = line.get_string()[..start.get_y()].to_string();
+                            println!("Line number {} is empty: {}",line.get_number(),new_value.is_empty());
+                            if new_value.is_empty() {
+                                self.remove_line(i);
+                                is_unordered = true;
+                            } else {
+                                self.replace_line(i, line.get_string(), new_value);
+                            }
+    
+                        }
+
+                        if i > start.get_x() && i < end.get_x() {
+                            self.remove_line(i);
+                        }
+    
+                        if i == end.get_x() {
+                            let new_value = line.get_string()[end.get_y()..].to_string(); 
+                            println!("Line number {} is empty: {}",line.get_number(),new_value.is_empty());
+                            println!("*{}*",new_value);
+                            if new_value.is_empty() {
+                                self.remove_line(i);
+                            } else {
+                                self.replace_line(i, line.get_string(), line.get_string()[end.get_y()..].to_string());
+                                if is_unordered {
+                                    self.set_line_number(i,start.get_x());
+
+                                } else {
+                                    self.set_line_number(i,start.get_x()+1);
+                                }
+                            }    
+                        }
+
+                    }
+
+                }
+    
+            }
+            else {
+
+                self.remove_line(readable_selection.get_start().get_x());
+
+            }
+        }
     }
 }

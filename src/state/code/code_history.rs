@@ -55,6 +55,18 @@ impl Change {
 
     }
 
+    pub fn create_change_with_strings(number: usize, from: String, to: String) -> Change {
+        Change { number, from, to }
+    }
+
+    pub fn create_change_with_line(line: Line, to: String) -> Change {
+        Change {
+            number: line.get_number(),
+            from: line.get_string(),
+            to,
+        }
+    }
+
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -127,5 +139,9 @@ impl CodeHistory {
 
     pub fn reset(&mut self) {
         self.version = 0;
+    }
+
+    pub fn get_changes(&self) -> Vec<Change> {
+        self.changes.clone()
     }
 }

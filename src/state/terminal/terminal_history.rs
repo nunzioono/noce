@@ -46,7 +46,7 @@ impl fmt::Display for ExecutedTerminalCommand {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ExecutedTerminalHistory {
     history: Vec<ExecutedTerminalCommand>,
-    position: u8,
+    position: isize,
 }
 
 impl Default for ExecutedTerminalHistory {
@@ -60,18 +60,18 @@ impl Default for ExecutedTerminalHistory {
 
 impl ExecutedTerminalHistory {
     pub fn up(&mut self) -> Option<&ExecutedTerminalCommand> {
-        if self.position < self.history.len() as u8 {
-            self.position += 1;
-            self.history.get(self.history.len() - 1 - self.position as usize)
+        if self.position >= 0 {
+            self.position -= 1;
+            self.history.get(self.position as usize )
         } else {
             None
         }
     }
 
     pub fn down(&mut self) -> Option<&ExecutedTerminalCommand> {
-        if self.position > 0 {
-            self.position -= 1;
-            self.history.get(self.history.len() - 1 - self.position as usize)
+        if self.position < self.history.len().try_into().unwrap() {
+            self.position += 1;
+            self.history.get(self.position as usize)
         } else {
             None
         }
@@ -79,13 +79,17 @@ impl ExecutedTerminalHistory {
 
     pub fn add(&mut self, command: ExecutedTerminalCommand) {
         self.history.push(command);
-        self.position = 0;
+        self.position =( self.history.len()-1) as isize;
     }
 
     pub fn flush(&mut self) {
         self.history.clear();
         self.position = 0;
     }
+
+    pub fn get_history(&self) -> &Vec<ExecutedTerminalCommand> {
+        &self.history
+    } 
 }
 
 impl fmt::Display for ExecutedTerminalHistory {

@@ -18,6 +18,6 @@ fn main() {
         TerminalComponent::new(),
         context.active_folder().clone());
 
-    start(app, context)
+    start(app, context, false)
     .expect("Error: panicked starting the systems");
 }

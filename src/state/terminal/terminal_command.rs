@@ -1,18 +1,9 @@
 
 // Terminal Command
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct TerminalCommand {
     command_buffer: String,
     position: usize,
-}
-
-impl Default for TerminalCommand {
-    fn default() -> Self {
-        TerminalCommand {
-            command_buffer: String::new(),
-            position: 0,
-        }
-    }
 }
 
 impl TerminalCommand {

@@ -24,10 +24,8 @@ pub trait System {
 
 
 
-pub fn start(mut app: App, mut context: AppContext) -> Result<(), Box<dyn Error>>{
+pub fn start(mut app: App, mut context: AppContext, debugging_events: bool) -> Result<(), Box<dyn Error>>{
     // setup terminal
-    let debugging_events = false;
-
     enable_raw_mode()?;
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen)?;
