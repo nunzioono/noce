@@ -538,7 +538,6 @@ mod unit_tests {
 
         pub mod context_tests {
             use crossterm::event::{KeyEvent, KeyCode, KeyModifiers, Event};
-
             use crate::state::{AppContext, App, project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent, ComponentType};
 
 
@@ -597,22 +596,136 @@ mod unit_tests {
         }
 
         pub mod project_events_tests {
+            use crossterm::event::{KeyEvent, KeyCode, KeyModifiers, Event};
+            use crate::state::{AppContext, App, project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent, ComponentType};
+            use std::{fs::File, path::Path};
+            use std::io::Write;
+            use tempfile::TempDir;
 
             #[test]
             pub fn hover_entry_test() {
+                let mut context = AppContext::default();
+                let mut app = App::new(
+                    ProjectComponent::new(context.active_folder().to_path_buf().clone()),
+                    CodeComponent::new(),
+                    TerminalComponent::new(),
+                    context.active_folder().clone());
+                let fake_enter_event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
+
+                app.handle_event(&mut context, None, fake_enter_event.clone());
+                let current_contents = app.get_project().get_contents().clone();
+                assert_eq!(current_contents.get(0).unwrap(),app.get_project().get_contents().get(app.get_project().get_hover().clone()).unwrap());
             }
     
+
+
+            pub fn scroll_to(context: &mut AppContext, app: &mut App, prefix: &str) {
+                let contents = app.get_project().get_contents().clone();
+                let contents_with_prefix: Vec<usize> = contents.clone().into_iter().enumerate().filter(|(_i,content)| {
+                    content.clone().as_path().file_name().unwrap().to_str().unwrap().contains(prefix)
+                }).map(|(i,_entry)| i).collect();
+                if contents_with_prefix.len() >= 1 {
+                    let index_to = contents_with_prefix.get(0).unwrap().clone();
+                    if index_to > 0 {
+                        let fake_down_event = Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::empty()));
+                        for _ in 0..index_to {
+                            app.handle_event(context, Some(ComponentType::Project), fake_down_event.clone());
+                        }        
+                    }
+                }
+            }
+
             #[test]
             pub fn focus_entry_test() {
+                let tmp_dir = TempDir::with_prefix_in("tmp-", ".").ok().unwrap();
+                let tmp_file_path = tmp_dir.path().join(Path::new("tmp_file.txt"));
+                let mut tmp_file = File::create(tmp_file_path).ok().unwrap();
+                let _ = writeln!(tmp_file," temporary file!");
+
+
+                let mut context = AppContext::default();
+                let mut app = App::new(
+                    ProjectComponent::new(context.active_folder().to_path_buf().clone()),
+                    CodeComponent::new(),
+                    TerminalComponent::new(),
+                    context.active_folder().clone());
+                let fake_enter_event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
+
+                app.handle_event(&mut context, None, fake_enter_event.clone());
+                scroll_to(&mut context, &mut app, "tmp-");
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
+                scroll_to(&mut context, &mut app, "tmp_file.txt");
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
+                assert_eq!(app.get_project().get_contents().get(0).unwrap(),app.get_project().get_contents().get(app.get_project().get_focus().unwrap().clone()).unwrap())
+
             }
 
         }
 
         pub mod code_events_tests {
+            use std::{fs::File, path::Path};
+            use std::io::Write;
+            use crossterm::event::{KeyEvent, KeyModifiers, Event, KeyCode};
+            use tempfile::TempDir;
+
+            use crate::state::{AppContext, App, project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent, ComponentType};
+
+            pub fn scroll_to(context: &mut AppContext, app: &mut App, prefix: &str) {
+                let contents = app.get_project().get_contents().clone();
+                let contents_with_prefix: Vec<usize> = contents.clone().into_iter().enumerate().filter(|(_i,content)| {
+                    content.clone().as_path().file_name().unwrap().to_str().unwrap().contains(prefix)
+                }).map(|(i,_entry)| i).collect();
+                if contents_with_prefix.len() >= 1 {
+                    let index_to = contents_with_prefix.get(0).unwrap().clone();
+                    if index_to > 0 {
+                        let fake_down_event = Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::empty()));
+                        for _ in 0..index_to {
+                            app.handle_event(context, Some(ComponentType::Project), fake_down_event.clone());
+                        }        
+                    }
+                }
+            }
 
             #[test]
             pub fn chars_events_test() {
 
+                let tmp_dir = TempDir::with_prefix_in("tmp-", ".").ok().unwrap();
+                let tmp_file_path = tmp_dir.path().join(Path::new("tmp_file.txt"));
+                let mut tmp_file = File::create(tmp_file_path).ok().unwrap();
+                let _ = writeln!(tmp_file," temporary file!");
+
+                let mut context = AppContext::default();
+                let mut app = App::new(
+                    ProjectComponent::new(context.active_folder().to_path_buf().clone()),
+                    CodeComponent::new(),
+                    TerminalComponent::new(),
+                    context.active_folder().clone());
+
+                let fake_enter_event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
+                let fake_tab_event = Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::empty()));
+                let fake_esc_event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::empty()));
+                let fake_char_event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()));
+
+                app.handle_event(&mut context, None, fake_enter_event.clone());
+                scroll_to(&mut context, &mut app, "tmp-");
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
+                assert!(context.active_folder().clone().as_path().file_name().unwrap().to_str().unwrap().contains("tmp-"));
+                scroll_to(&mut context, &mut app, "tmp_file.txt");
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
+                assert_eq!(context.active_file().clone().unwrap().file_name().unwrap().to_str().unwrap(),"tmp_file.txt");
+                //set the new file if the active file changed
+                if context.active_file_changed() {
+                    app.get_mut_code().get_mut_current().flush();
+                    app.get_mut_code().set_current(context.active_file().clone());
+                    context.set_active_file_changed(false);
+                }
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_esc_event.clone());
+                app.handle_event(&mut context, None, fake_tab_event.clone());
+                app.handle_event(&mut context, None, fake_enter_event.clone());
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_char_event.clone());
+                app.get_mut_code().get_mut_current().remove_cursor();
+                let code_content = app.get_code().get_current().get_content().get(0).unwrap().get_string();
+                assert_eq!(code_content.as_str(),"a temporary file!");
             }
 
             #[test]

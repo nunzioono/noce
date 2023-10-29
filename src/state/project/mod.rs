@@ -56,8 +56,8 @@ impl ProjectComponent {
         self
     }
 
-    pub fn set_focus(&mut self, focus: usize) -> &mut Self {
-        self.focus = Some(focus);
+    pub fn set_focus(&mut self, focus: Option<usize>) -> &mut Self {
+        self.focus = focus;
         self
     }
 
@@ -116,14 +116,16 @@ impl Component for ProjectComponent {
                     KeyCode::Enter => {
                         if !self.popup {
                         if !self.edit {
-                            self.set_focus(self.get_hover().clone());
+                            self.set_focus(Some(self.get_hover().clone()));
 
                             if let Some(focus) = self.get_focus() {
                                 let selected_item = self.contents[focus.clone()].clone();
 
                                 if selected_item.is_dir() {
                                     context.set_active_folder(selected_item.clone());
-                                    self.update_contents(&selected_item)
+                                    self.update_contents(&selected_item);
+                                    self.set_hover(0);
+                                    self.set_focus(None);
                                 } else if  selected_item.is_file() {
                                     context.set_active_file(Some(selected_item));
                                 }                                    
@@ -256,7 +258,7 @@ impl ProjectComponent {
         }
 
         ProjectComponent {
-            contents: contents,
+            contents,
             hover: 0,
             focus: None,
             edit: false,

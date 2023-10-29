@@ -105,7 +105,7 @@ impl Code {
 
     pub fn change_line_at_cursor(&mut self, new_value: String) {
         for line in &mut self.content {
-            if line.number == self.cursor.get_x() {
+            if line.number == self.cursor.get_x()+1 {
                 line.line = new_value;
                 break;
             }

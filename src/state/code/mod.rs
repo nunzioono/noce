@@ -125,7 +125,7 @@ impl CodeComponent {
                 .split("\n")
                 .enumerate()
                 .for_each(|tuple| {
-                    let line = Line::new(tuple.0, tuple.1.to_string());
+                    let line = Line::new(tuple.0+1, tuple.1.to_string());
                     self.current.add_line(line);
                 })
             }

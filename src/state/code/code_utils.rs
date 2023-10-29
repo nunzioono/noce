@@ -615,9 +615,10 @@ pub fn handle_redo(code_component: &mut CodeComponent) {
 
 pub fn handle_char(code_component: &mut CodeComponent, char: String) {
     code_component.current.remove_cursor();
-    if let Some(current_line) = code_component.current.get_line(code_component.current.get_cursor().get_x()) {
+    if let Some(current_line) = code_component.current.get_line(code_component.current.get_cursor().get_x()+1) {
         code_component.current.change_line_at_cursor(current_line.get_string()[..code_component.current.get_cursor().get_y()].to_string() + &char.to_string() + &current_line.get_string()[code_component.current.get_cursor().get_y()..].to_string());    
     }
+    
     let y = code_component.current.get_cursor().get_y();
     code_component.current.get_mut_cursor().set_y(y+1);
     code_component.current.set_cursor();
