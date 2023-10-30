@@ -672,6 +672,21 @@ mod unit_tests {
             use crate::state::code::code_utils::Point;
             use crate::state::{AppContext, App, project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent, ComponentType};
 
+            pub fn setup_test(prefix: &str) -> (AppContext,App,TempDir) {
+                let tmp_dir = TempDir::with_prefix_in(prefix, ".").ok().unwrap();
+                let tmp_file_path = tmp_dir.path().join(Path::new("tmp_file.txt"));
+                let mut tmp_file = File::create(tmp_file_path).ok().unwrap();
+                let _ = writeln!(tmp_file," temporary file!");
+
+                let context = AppContext::default();
+                let app = App::new(
+                    ProjectComponent::new(context.active_folder().to_path_buf().clone()),
+                    CodeComponent::new(),
+                    TerminalComponent::new(),
+                    context.active_folder().clone());
+                (context,app,tmp_dir)
+            }
+
             pub fn scroll_to(context: &mut AppContext, app: &mut App, prefix: &str) {
                 let contents = app.get_project().get_contents().clone();
                 let contents_with_prefix: Vec<usize> = contents.clone().into_iter().enumerate().filter(|(_i,content)| {
@@ -690,18 +705,7 @@ mod unit_tests {
 
             #[test]
             pub fn chars_events_test() {
-
-                let tmp_dir = TempDir::with_prefix_in("tmp-", ".").ok().unwrap();
-                let tmp_file_path = tmp_dir.path().join(Path::new("tmp_file.txt"));
-                let mut tmp_file = File::create(tmp_file_path).ok().unwrap();
-                let _ = writeln!(tmp_file," temporary file!");
-
-                let mut context = AppContext::default();
-                let mut app = App::new(
-                    ProjectComponent::new(context.active_folder().to_path_buf().clone()),
-                    CodeComponent::new(),
-                    TerminalComponent::new(),
-                    context.active_folder().clone());
+                let (mut context, mut app, _dir) = setup_test("tmp-chars-");
 
                 let fake_enter_event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
                 let fake_tab_event = Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::empty()));
@@ -709,9 +713,9 @@ mod unit_tests {
                 let fake_char_event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty()));
 
                 app.handle_event(&mut context, None, fake_enter_event.clone());
-                scroll_to(&mut context, &mut app, "tmp-");
+                scroll_to(&mut context, &mut app, "tmp-chars-");
                 app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
-                assert!(context.active_folder().clone().as_path().file_name().unwrap().to_str().unwrap().contains("tmp-"));
+                assert!(context.active_folder().clone().as_path().file_name().unwrap().to_str().unwrap().contains("tmp-chars-"));
                 scroll_to(&mut context, &mut app, "tmp_file.txt");
                 app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
                 assert_eq!(context.active_file().clone().unwrap().file_name().unwrap().to_str().unwrap(),"tmp_file.txt");
@@ -732,17 +736,7 @@ mod unit_tests {
 
             #[test]
             pub fn arrows_events_test() {
-                let tmp_dir = TempDir::with_prefix_in("tmp-", ".").ok().unwrap();
-                let tmp_file_path = tmp_dir.path().join(Path::new("tmp_file.txt"));
-                let mut tmp_file = File::create(tmp_file_path).ok().unwrap();
-                let _ = writeln!(tmp_file," temporary file!");
-
-                let mut context = AppContext::default();
-                let mut app = App::new(
-                    ProjectComponent::new(context.active_folder().to_path_buf().clone()),
-                    CodeComponent::new(),
-                    TerminalComponent::new(),
-                    context.active_folder().clone());
+                let (mut context, mut app, _dir) = setup_test("tmp-arrows-");
 
                 let fake_enter_event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
                 let fake_tab_event = Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::empty()));
@@ -753,9 +747,9 @@ mod unit_tests {
                 let fake_right_event = Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::empty()));
 
                 app.handle_event(&mut context, None, fake_enter_event.clone());
-                scroll_to(&mut context, &mut app, "tmp-");
+                scroll_to(&mut context, &mut app, "tmp-arrows-");
                 app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
-                assert!(context.active_folder().clone().as_path().file_name().unwrap().to_str().unwrap().contains("tmp-"));
+                assert!(context.active_folder().clone().as_path().file_name().unwrap().to_str().unwrap().contains("tmp-arrows-"));
                 scroll_to(&mut context, &mut app, "tmp_file.txt");
                 app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
                 assert_eq!(context.active_file().clone().unwrap().file_name().unwrap().to_str().unwrap(),"tmp_file.txt");
