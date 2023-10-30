@@ -134,7 +134,6 @@ pub fn handle_up(code_component: &mut CodeComponent, event: Event) {
 
     if readable_current_code.get_cursor().get_x() > 0 {
        if let Some(upper) = readable_current_code.get_line(readable_cursor.get_x()) {
-            println!("{:#?}",upper);
             upper_size = upper.get_string().len();
        } 
     }
@@ -202,7 +201,6 @@ pub fn handle_up(code_component: &mut CodeComponent, event: Event) {
         } else if !is_selecting && !is_shift {
 
             if readable_cursor.get_x() > 0 {
-                println!("{:#?} {}",mutable_code,upper_size.clone());
                 mutable_code.get_mut_cursor().move_up(false, upper_size);
             } else {
                 mutable_code.get_mut_cursor().move_up(true, upper_size);
@@ -661,7 +659,6 @@ pub fn handle_delete(code_component: &mut CodeComponent) {
 
         for i in start.get_x()..mutable_code.get_content().len() {
             if let Some(line) = mutable_code.get_mut_content().get_mut(i) {
-                println!("Moving line number {} to number {}+{}+1-{}", line.get_number(), i, start.get_x(), end.get_x());
                 line.set_number(line.get_number()+start.get_x()+1-end.get_x());
             }
         }
