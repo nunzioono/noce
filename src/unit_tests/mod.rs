@@ -663,11 +663,13 @@ mod unit_tests {
         }
 
         pub mod code_events_tests {
+            use std::env;
             use std::{fs::File, path::Path};
             use std::io::Write;
             use crossterm::event::{KeyEvent, KeyModifiers, Event, KeyCode};
             use tempfile::TempDir;
 
+            use crate::state::code::code_utils::Point;
             use crate::state::{AppContext, App, project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent, ComponentType};
 
             pub fn scroll_to(context: &mut AppContext, app: &mut App, prefix: &str) {
@@ -730,7 +732,84 @@ mod unit_tests {
 
             #[test]
             pub fn arrows_events_test() {
+                let tmp_dir = TempDir::with_prefix_in("tmp-", ".").ok().unwrap();
+                let tmp_file_path = tmp_dir.path().join(Path::new("tmp_file.txt"));
+                let mut tmp_file = File::create(tmp_file_path).ok().unwrap();
+                let _ = writeln!(tmp_file," temporary file!");
 
+                let mut context = AppContext::default();
+                let mut app = App::new(
+                    ProjectComponent::new(context.active_folder().to_path_buf().clone()),
+                    CodeComponent::new(),
+                    TerminalComponent::new(),
+                    context.active_folder().clone());
+
+                let fake_enter_event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
+                let fake_tab_event = Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::empty()));
+                let fake_esc_event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::empty()));
+                let fake_down_event = Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::empty()));
+                let fake_up_event = Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::empty()));
+                let fake_left_event = Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::empty()));
+                let fake_right_event = Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::empty()));
+
+                app.handle_event(&mut context, None, fake_enter_event.clone());
+                scroll_to(&mut context, &mut app, "tmp-");
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
+                assert!(context.active_folder().clone().as_path().file_name().unwrap().to_str().unwrap().contains("tmp-"));
+                scroll_to(&mut context, &mut app, "tmp_file.txt");
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
+                assert_eq!(context.active_file().clone().unwrap().file_name().unwrap().to_str().unwrap(),"tmp_file.txt");
+                //set the new file if the active file changed
+                if context.active_file_changed() {
+                    app.get_mut_code().get_mut_current().flush();
+                    app.get_mut_code().set_current(context.active_file().clone());
+                    context.set_active_file_changed(false);
+                }
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_esc_event.clone());
+                app.handle_event(&mut context, None, fake_tab_event.clone());
+                app.handle_event(&mut context, None, fake_enter_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));                
+
+                //test on up event with and without exceed
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_up_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_down_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(1, 0));
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_up_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));
+
+                //test on down event with and without exceed
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_down_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(1, 0));
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_down_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(1, 0));
+
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_up_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));
+
+                //test on right event with and without exceed
+                let first_line_len = app.get_code().get_current().get_content().get(0).unwrap().get_string().len();
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_right_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 1));
+                for _ in 0..first_line_len-2 {
+                    let current_y = app.get_code().get_current().get_cursor().clone().get_y();
+                    app.handle_event(&mut context, Some(ComponentType::Code), fake_right_event.clone());
+                    assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, current_y+1));        
+                }
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_right_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(1, 0));
+
+                //test on left event with and without exceed
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_left_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, first_line_len-2));
+                let mut current_y = app.get_code().get_current().get_cursor().clone().get_y();
+                for _ in 0..first_line_len-2 {
+                    app.handle_event(&mut context, Some(ComponentType::Code), fake_left_event.clone());
+                    assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, current_y-1));
+                    current_y-=1;        
+                }
+                app.handle_event(&mut context, Some(ComponentType::Code), fake_left_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));
             }
 
             #[test]

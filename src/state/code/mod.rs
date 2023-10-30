@@ -82,7 +82,7 @@ impl Component for CodeComponent {
                         handle_enter(self);
                     },
                     KeyCode::Up => {
-                        handle_up(self, event);
+                        handle_up(self, event.clone());
 
                     },
                     KeyCode::Down => {
