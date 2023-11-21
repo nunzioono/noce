@@ -669,6 +669,7 @@ mod unit_tests {
             use crossterm::event::{KeyEvent, KeyModifiers, Event, KeyCode};
             use tempfile::TempDir;
 
+            use crate::state::code::code_selection::CodeSelection;
             use crate::state::code::code_utils::Point;
             use crate::state::{AppContext, App, project::ProjectComponent, code::CodeComponent, terminal::TerminalComponent, ComponentType};
 
@@ -736,6 +737,7 @@ mod unit_tests {
 
             #[test]
             pub fn arrows_events_test() {
+                env::set_var("RUST_BACKTRACE", "1");
                 let (mut context, mut app, _dir) = setup_test("tmp-arrows-");
 
                 let fake_enter_event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
@@ -764,51 +766,149 @@ mod unit_tests {
                 app.handle_event(&mut context, None, fake_enter_event.clone());
                 assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));                
 
-                //test on up event with and without exceed
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_up_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_down_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(1, 0));
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_up_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));
-
-                //test on down event with and without exceed
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_down_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(1, 0));
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_down_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(1, 0));
-
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_up_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));
-
-                //test on right event with and without exceed
-                let first_line_len = app.get_code().get_current().get_content().get(0).unwrap().get_string().len();
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_right_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 1));
-                for _ in 0..first_line_len-2 {
-                    let current_y = app.get_code().get_current().get_cursor().clone().get_y();
+                //test right arrow
+                for line in app.get_code().get_current().get_content().clone() {
+                    for _ in 1..line.get_string().len() {
+                        let previous_cursor_position = app.get_code().get_current().get_cursor().clone();
+                        app.handle_event(&mut context, Some(ComponentType::Code), fake_right_event.clone());
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(line.get_number()-1, previous_cursor_position.get_y()+1));
+                    }
+                    let previous_cursor_position = app.get_code().get_current().get_cursor().clone();
                     app.handle_event(&mut context, Some(ComponentType::Code), fake_right_event.clone());
-                    assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, current_y+1));        
+                    if line.get_number() == app.get_code().get_current().get_content().len() {
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),previous_cursor_position);
+                    } else {
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(line.get_number(), 0));
+                    }
                 }
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_right_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(1, 0));
+                
+                //note that now the cursor should be on the last char of the last line
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(app.get_code().get_current().get_content().len()-1, app.get_code().get_current().get_content().get(app.get_code().get_current().get_content().len()-1).unwrap().get_string().len()-1));
 
-                //test on left event with and without exceed
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_left_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, first_line_len-2));
-                let mut current_y = app.get_code().get_current().get_cursor().clone().get_y();
-                for _ in 0..first_line_len-2 {
+                //test left arrow
+                let mut reversed_lines = app.get_code().get_current().get_content().clone();
+                reversed_lines.reverse();
+                for line in reversed_lines.into_iter() {
+                    for _ in 1..line.get_string().len() {
+                        let previous_cursor_position = app.get_code().get_current().get_cursor().clone();
+                        app.handle_event(&mut context, Some(ComponentType::Code), fake_left_event.clone());
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(line.get_number()-1, previous_cursor_position.get_y()-1));
+                    }
+                    let previous_cursor_position = app.get_code().get_current().get_cursor().clone();
                     app.handle_event(&mut context, Some(ComponentType::Code), fake_left_event.clone());
-                    assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, current_y-1));
-                    current_y-=1;        
+                    if line.get_number() == 1 {
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),previous_cursor_position);
+                    } else {
+                        let upper_line = app.get_code().get_current().get_content().get(line.get_number()-2).unwrap();
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(line.get_number()-2, upper_line.get_string().len()-2));
+                    }
                 }
-                app.handle_event(&mut context, Some(ComponentType::Code), fake_left_event.clone());
-                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));
+
+                //note that now the cursor should be on the first char of the first line
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0,0));
+
+                //test down arrow
+                for line in app.get_code().get_current().get_content().clone() {
+                    for _ in 1..line.get_string().len() {
+                        let previous_cursor_position = app.get_code().get_current().get_cursor().clone();
+                        app.handle_event(&mut context, Some(ComponentType::Code), fake_down_event.clone());
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(line.get_number(), previous_cursor_position.get_y()));
+                    }
+                    let previous_cursor_position = app.get_code().get_current().get_cursor().clone();
+                    app.handle_event(&mut context, Some(ComponentType::Code), fake_down_event.clone());
+                    if line.get_number() == app.get_code().get_current().get_content().len() {
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),previous_cursor_position);
+                    } else {
+                        let last_line = app.get_code().get_current().get_content().get(app.get_code().get_current().get_content().len()-1).unwrap().clone();
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(line.get_number(), last_line.get_string().len()-1));
+                    }
+                }
+
+                //note that now the cursor should be on the last char of the last line
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(app.get_code().get_current().get_content().len()-1, app.get_code().get_current().get_content().get(app.get_code().get_current().get_content().len()-1).unwrap().get_string().len()-1));
+
+                
+                //test up arrow
+                let mut reversed_lines = app.get_code().get_current().get_content().clone();
+                reversed_lines.reverse();
+                for line in reversed_lines.into_iter() {
+                    for _ in 1..line.get_string().len() {
+                        let previous_cursor_position = app.get_code().get_current().get_cursor().clone();
+                        app.handle_event(&mut context, Some(ComponentType::Code), fake_up_event.clone());
+                        let mut upper_size = 0;
+                        if let Some(upper_line) = app.get_code().get_current().get_content().get(line.get_number()-1) {
+                            upper_size = upper_line.get_string().len();
+                        }
+                        if upper_size < previous_cursor_position.get_y() {
+                            assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(line.get_number()-1, upper_size-1))
+                        } else {
+                            assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(line.get_number()-1, previous_cursor_position.get_y()));
+                        }
+                    }
+                    let previous_cursor_position = app.get_code().get_current().get_cursor().clone();
+                    app.handle_event(&mut context, Some(ComponentType::Code), fake_up_event.clone());
+                    if line.get_number() != 1 {
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(previous_cursor_position.get_x()-1, previous_cursor_position.get_y()));
+                    } else {
+                        assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0,0));
+                    }
+                }
             }
 
             #[test]
             pub fn selection_events_test() {
+                let (mut context, mut app, _dir) = setup_test("tmp-selection-");
 
+                let fake_enter_event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()));
+                let fake_tab_event = Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::empty()));
+                let fake_esc_event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::empty()));
+                let fake_down_event = Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::empty()));
+                let fake_up_event = Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::empty()));
+                let fake_left_event = Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::empty()));
+                let fake_right_event = Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::empty()));
+                let fake_shift_down_event = Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::SHIFT));
+                let fake_shift_up_event = Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::SHIFT));
+                let fake_shift_left_event = Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::SHIFT));
+                let fake_shift_right_event = Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT));
+                
+
+                app.handle_event(&mut context, None, fake_enter_event.clone());
+                scroll_to(&mut context, &mut app, "tmp-selection-");
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
+                assert!(context.active_folder().clone().as_path().file_name().unwrap().to_str().unwrap().contains("tmp-selection-"));
+                scroll_to(&mut context, &mut app, "tmp_file.txt");
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_enter_event.clone());
+                assert_eq!(context.active_file().clone().unwrap().file_name().unwrap().to_str().unwrap(),"tmp_file.txt");
+                //set the new file if the active file changed
+                if context.active_file_changed() {
+                    app.get_mut_code().get_mut_current().flush();
+                    app.get_mut_code().set_current(context.active_file().clone());
+                    context.set_active_file_changed(false);
+                }
+                app.handle_event(&mut context, Some(ComponentType::Project), fake_esc_event.clone());
+                app.handle_event(&mut context, None, fake_tab_event.clone());
+                app.handle_event(&mut context, None, fake_enter_event.clone());
+                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(0, 0));                
+
+                //test selection right
+                let start = Point::new(0,0);
+                for line in app.get_code().get_current().get_content().clone() {
+                    for _ in 1..line.get_string().len() {
+                        let previous_position = app.get_code().get_current().get_cursor().clone();
+                        app.handle_event(&mut context, Some(ComponentType::Code), fake_shift_right_event.clone());
+                        assert!(app.get_code().get_current().get_selection().is_some());
+                        if previous_position.get_y() < line.get_string().len() - 1 {
+                            assert_eq!(app.get_code().get_current().get_selection().clone().unwrap(),CodeSelection::new(start.clone(), Point::new(previous_position.get_x(), previous_position.get_y()+1)));
+                            if app.get_code().get_current().get_selection().clone().unwrap().get_end().get_y() == line.get_string().len() - 2 {
+                                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(app.get_code().get_current().get_selection().clone().unwrap().get_end().get_x()+1, 0));
+                            } else {
+                                assert_eq!(app.get_code().get_current().get_cursor().clone(),Point::new(app.get_code().get_current().get_selection().clone().unwrap().get_end().get_x(), app.get_code().get_current().get_selection().clone().unwrap().get_end().get_y()+1));
+                            }
+                        } else {
+                            assert_eq!(app.get_code().get_current().get_selection().clone().unwrap(),CodeSelection::new(start.clone(), Point::new(previous_position.get_x()+1, 0)));
+                        }
+                    }
+                }
             }
 
             #[test]

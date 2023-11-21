@@ -144,7 +144,7 @@ impl UiSystem {
         .into_iter()
         .map(move |line| {
             let mut vec: Vec<Span<'_>> = vec![];
-            let line_number = line.get_number();
+            let line_number = line.get_number()-1;
             let focus: Option<&ComponentType>;
             if let Some(tmp) = context.focus() {
                 focus = Some(tmp);
@@ -275,7 +275,7 @@ impl UiSystem {
         let numbers: Vec<ListItem>= code
         .into_iter()
         .map(|line| {
-            ListItem::new((line.get_number()+1).to_string())
+            ListItem::new((line.get_number()).to_string())
         })
         .collect();
 
@@ -284,7 +284,7 @@ impl UiSystem {
 
         let list_numbers = List::new(numbers);
 
-        let mut state = ListState::default().with_selected(Some(app.get_code().get_current().get_cursor().get_x()));
+        let mut state = ListState::default().with_selected(Some(app.get_code().get_current().get_cursor().get_x()+1));
         
         frame.render_widget(block, code_area);
         frame.render_stateful_widget(list_numbers, layout_code.get(0).unwrap().clone(), &mut state);

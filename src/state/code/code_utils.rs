@@ -128,12 +128,12 @@ pub fn handle_up(code_component: &mut CodeComponent, event: Event) {
         readable_selection = selection.clone();
     }
 
-    if let Some(current) = readable_current_code.get_line(readable_cursor.get_x() + 1) {
+    if let Some(current) = readable_current_code.get_line(readable_cursor.get_x()) {
         current_size = current.get_string().len();
     } 
 
     if readable_current_code.get_cursor().get_x() > 0 {
-       if let Some(upper) = readable_current_code.get_line(readable_cursor.get_x()) {
+       if let Some(upper) = readable_current_code.get_line(readable_cursor.get_x()-1) {
             upper_size = upper.get_string().len();
        } 
     }
@@ -193,7 +193,7 @@ pub fn handle_up(code_component: &mut CodeComponent, event: Event) {
             } else {
                 current_selection_end = readable_cursor.clone();
                 current_selection_end.move_up(true, upper_size);
-                current_selection_end.move_right(false, current_size);
+                //current_selection_end.move_right(false, current_size);
                 mutable_code.create_selection(readable_cursor, current_selection_end.clone());
                 mutable_code.get_mut_cursor().move_up(true, upper_size);
             }
@@ -228,11 +228,11 @@ pub fn handle_down(code_component: &mut CodeComponent, event: Event) {
         readable_selection = selection.clone();
     }
 
-    if let Some(current) = readable_current_code.get_line(readable_cursor.get_x()+1) {
+    if let Some(current) = readable_current_code.get_line(readable_cursor.get_x()) {
         current_size = current.get_string().len();
     }
 
-    if let Some(lower) = readable_current_code.get_line(readable_cursor.get_x() + 2) {
+    if let Some(lower) = readable_current_code.get_line(readable_cursor.get_x() + 1) {
         lower_size = lower.get_string().len();
     }
 
@@ -320,12 +320,12 @@ pub fn handle_left(code_component: &mut CodeComponent, event: Event) {
         readable_selection = selection.clone();
     }
 
-    if let Some(current) = readable_current_code.get_line(readable_cursor.get_x()+1) {
+    if let Some(current) = readable_current_code.get_line(readable_cursor.get_x()) {
         current_size = current.get_string().len();
     }
 
     if readable_current_code.get_cursor().get_x() > 0 {
-       if let Some(upper) = readable_current_code.get_line(readable_cursor.get_x()) {
+       if let Some(upper) = readable_current_code.get_line(readable_cursor.get_x()-1) {
             upper_size = upper.get_string().len();
        } 
     }
@@ -415,7 +415,7 @@ pub fn handle_right(code_component: &mut CodeComponent, event: Event) {
         readable_selection = selection.clone();
     }
 
-    if let Some(current) = readable_current_code.get_line(readable_cursor.get_x()+1) {
+    if let Some(current) = readable_current_code.get_line(readable_cursor.get_x()) {
         current_size = current.get_string().len();
     }
 
@@ -615,13 +615,12 @@ pub fn handle_redo(code_component: &mut CodeComponent) {
 
 pub fn handle_char(code_component: &mut CodeComponent, char: String) {
     code_component.current.remove_cursor();
-    if let Some(current_line) = code_component.current.get_line(code_component.current.get_cursor().get_x()+1) {
+    if let Some(current_line) = code_component.current.get_line(code_component.current.get_cursor().get_x()) {
         code_component.current.change_line_at_cursor(current_line.get_string()[..code_component.current.get_cursor().get_y()].to_string() + &char.to_string() + &current_line.get_string()[code_component.current.get_cursor().get_y()..].to_string());    
     }
     
     let y = code_component.current.get_cursor().get_y();
     code_component.current.get_mut_cursor().set_y(y+1);
-    code_component.current.set_cursor();
 }
 
 pub fn handle_delete(code_component: &mut CodeComponent) {

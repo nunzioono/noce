@@ -118,7 +118,7 @@ impl Code {
     }
 
     pub fn get_line(&self, number: usize) -> Option<&Line> {
-        self.content.iter().find(|line| line.number == number)
+        self.content.get(number)
     }
 
     pub fn set_line_number(&mut self, old_number: usize, new_number: usize) {
