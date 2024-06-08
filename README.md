@@ -10,8 +10,8 @@ CONTRIBUTIONS
 
 Contributions are highly encouraged, the road to go would likely include the following features:
 
-- [] improving the editing.
-- [] making a better terminal interaction.
-- [] include a treesitter like system to implement in future syntax highlighting and LSP support for autocompletion and other interesting features.
-- [] making a customizable ui (currently based on ratatui and crossterm).
+- [ ] improving the editing.
+- [ ] making a better terminal interaction.
+- [ ] include a treesitter like system to implement in future syntax highlighting and LSP support for autocompletion and other interesting features.
+- [ ] making a customizable ui (currently based on ratatui and crossterm).
 
