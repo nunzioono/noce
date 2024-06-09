@@ -17,4 +17,7 @@ Contributions are highly encouraged, the road to go would likely include the fol
 - [ ] making a better terminal interaction.
 - [ ] include a treesitter like system to implement in future syntax highlighting and LSP support for autocompletion and other interesting features.
 - [ ] making a customizable ui (currently based on ratatui and crossterm).
-
+- [ ] create a plugin manager and allow users to create their own plugins
+   * [ ] make an api to expose to the users to allow them to modify noce configuration
+   * [ ] allow execution of Lua to interact with the api.
+   * [ ] make a plugin manager to allow users to select, download, install and update plugins
