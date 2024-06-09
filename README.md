@@ -11,7 +11,7 @@ As now the project is totally unstable, it does not works in many fields and act
 Contributions are highly encouraged, the road to go would likely include the following features:
 
 - [ ] improving the editing:
-   * [x] For now insertion, deletion and saving are implementer.
+   * [x] For now insertion, deletion and saving are implemented.
    * [ ] Need to debug, implement and test selection
    * [ ] Need to implement cut, Copy and past functionalities
 - [ ] making a better terminal interaction.
